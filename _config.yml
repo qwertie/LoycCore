@@ -1,0 +1,27 @@
+# This is the configuration file for Jekyll, which is a program "built in" 
+# to GitHub that transforms files for web output (e.g. Markdown to HTML).
+# The Jekyll documentation is useless for noobs; try this tutorial instead:
+# https://www.andrewmunsell.com/tutorials/jekyll-by-example/tutorial
+exclude: [Src, Lib, Visual Studio Integration]
+
+# Jekyll settings
+markdown: redcarpet
+encoding: UTF-8
+highlighter: rouge
+paginate: 8
+paginate_path: "blog/page:num"
+permalink: /:categories/:year/:title.html
+safe: true
+lsi: false
+
+# Poole/Hyde settings
+title:       "LoycCore"                  # shown in large text
+tagline:     "Handy libraries"           # shown in title bar beside title
+description: "Filling the gaps in .NET"  # shown under the title
+version: (I changed Hyde not to display this)
+url:     "http://loyc.net"               # Used by the Atom feed
+baseurl: ""                              # grep "site.baseurl" to see how it is used
+github:
+  repo:  https://github.com/qwertie/LoycCore # "GitHub project" link on sidebar
+  user: qwertie                          # For comments system (not Hyde)
+  project: loyccore                      # For comments system (not Hyde)
