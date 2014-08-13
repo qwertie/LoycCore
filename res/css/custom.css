@@ -33,3 +33,10 @@ a[href*="//localhost"]:after {
   content: '';
   margin: 0;
 }
+
+a {
+  text-decoration: underline;
+}
+.sidebar a {
+  text-decoration: none;
+}

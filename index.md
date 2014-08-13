@@ -20,6 +20,8 @@ The libraries are:
   [2]: http://www.codeproject.com/Articles/26171/VList-data-structures-in-C
   [3]: https://github.com/qwertie/Loyc/wiki/Loyc-Expression-Syntax
 
+They are available as a [NuGet package](https://www.nuget.org/packages/LoycCore/).
+
 Dependency tree
 ---------------
 
