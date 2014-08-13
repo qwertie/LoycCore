@@ -5,7 +5,7 @@ layout: article
 
 ## Introduction
 
-Creating the `AList<T>` data structures for my [list trifecta series](alists-part1.html) must have taken hundreds of hours. The `DList<T>` is a vastly simpler beast, but may be able to boost your insert/remove speed a lot without adversely affecting the performance of other operations such as the indexer.
+Creating the `AList<T>` data structures for my [list trifecta series](alists-part1.html) must have taken hundreds of hours. The `DList<T>` is a vastly simpler beast, but in certain cases will boost your insert/remove speed a lot, without adversely affecting the performance of other operations such as the indexer.
 
 `DList<T>` is a "circular buffer". A circular buffer is a region of memory organized so that you can efficiently add or remove items at both ends, and is commonly used to implement queues (it's called a "circular queue").
 
@@ -76,10 +76,19 @@ Leaf nodes of `AList`s contain a single `InternalDList<T>` structure. `DList<T>`
 
 If you don't get what `InternalDList` is for, please read [my article on `InternalList`](http://core.loyc.net/collections/internal-list.html). `InternalList<T>` is the same concept, minus the "circular queue" part.
 
+## Benchmarks
 
+I did a series of benchmarks at the end of my List Trifecta series of articles, and I threw in `DList<T>` for the ride.
 
+Here's one of the benchmark results:
 
+![Results](bm-insert-at-random-indexes-.png)
+![Results](bm-insert-at-random-indexes.png)
 
+What this shows is that for lists with more than 1000 items, `DList<T>` does random insertions about twice as fast as `List<T>`. For more benchmark results, see [List Trifecta part 3](alists-part3.html).
 
+## Download!
 
+I am happy to announce a new NuGet package called ["LoycCore"](https://www.nuget.org/packages/LoycCore/) which includes `DList`, `AList`, other data structures, and various other handy stuff, including most of the stuff I have published articles about in the past. I also created a [new web site for Loyc Core](http://core.loyc.net).
 
+`DList<T>` is part of `Loyc.Essentials.dll`. The [source code](https://github.com/qwertie/LoycCore/tree/master/Loyc.Essentials/Collections/Implementations) lives on GitHub. In principle `DList<T>` and `InternalDList<T>` can be extracted from this assembly, but it would take a little work, as they do depend on interfaces and other code in Loyc.Essentials.dll.

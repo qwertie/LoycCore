@@ -32,12 +32,12 @@ So `List<T>` requires six additional words of memory compared to an array (I mea
 public T this[int index]
 {
     get {
-        if (index >= _size)
+        if ((uint)index >= (uint)_size)
             ThrowHelper.ThrowArgumentOutOfRangeException();
         return _items[index];
     }
     set {
-        if (index >= _size)
+        if ((uint)index >= (uint)_size)
             ThrowHelper.ThrowArgumentOutOfRangeException();
         _items[index] = value;
         _version++;
@@ -45,7 +45,7 @@ public T this[int index]
 }
 ~~~
 
-Note that the `_items[index]` operation implicitly contains a range check: the CLR performs a check equivalent to `(uint)index < (uint)_items.Length` before it actually reads from an array or writes to it. So there are actually two range checks here. The JIT usually does not know that `_size < _items.Length` (and besides, the `index >= _size` check does not verify that `index >= 0`) so it cannot remove the second check based on the result of the first check.
+Note that the `_items[index]` operation implicitly contains a range check: the CLR performs a check equivalent to `(uint)index < (uint)_items.Length` before it actually reads from an array or writes to it. So there are actually two range checks here. The JIT usually does not know that `_size < _items.Length` so it cannot remove the second check based on the result of the first check.
 
 ### The downside to `T[]`
 
@@ -75,9 +75,11 @@ and then you might write a bunch of code to do the things that `List<T>` already
         Array.Copy(_array, a, _count);
     }
 
-Of course, this road leads to madness. Luckily, there's no need to ever write code like this: just use `InternalList<T>` instead!
+Of course, this road leads to madness. Luckily, you never need to write code like this: just use `InternalList<T>` instead!
 
 ## Introducing InternalList
+
+`InternalList<T>` is a drop-in substitute for `List<T>` defined like this:
 
     [Serializable]
     public struct InternalList<T> : IListAndListSource<T>, 
@@ -99,6 +101,7 @@ Of course, this road leads to madness. Luckily, there's no need to ever write co
         public void Resize(int newSize, bool allowReduceCapacity = true) {...}
         public void Add(T item) {...}
         ...
+        ...
     }
 
 To eliminate the extra memory required by `List<T>`, InternalList is a `struct` rather a `class`; and for maximum performance, it asserts rather than throwing an exception when an incorrect array index is used, so that Release builds (where `Debug.Assert` disappears) run as fast as possible.
@@ -110,17 +113,17 @@ To eliminate the extra memory required by `List<T>`, InternalList is a `struct` 
     // error CS1612: Cannot modify the return value of 'List<Point>.this[int]' because it is not a variable
     pts[0].X = 5;
 
-But if `pts` is an `InternalList` then you can write `pts.InternalArray[0].X = 5;`
+But if `pts` is an `InternalList` then you can write `pts.InternalArray[0].X = 5;`.
 
 `InternalList<T>` has other things that `List<T>` doesn't, such as a `Resize()` method (and an equivalent setter for `Count`), and a handy `Last` property to get or set the last item.
 
 But it should be understood that `InternalList` is only meant for rare cases where you need better performance than `List<T>`. It does have major disadvantages:
 
-1. You must not write `new InternalList<T>()` because C# does not support default constructors and `InternalList<T>` requires non-null initialization; methods such as `Add()`, `Insert()` and `Resize()` assume `_array` is not null. The correct initialization is `InternalList<T> list = InternalList<T>.Empty;`
+1. You must not write `new InternalList<T>()` because C# does not support `struct` default constructors and `InternalList<T>` requires non-null initialization; methods such as `Add()`, `Insert()` and `Resize()` assume `_array` is not null. The correct initialization is `InternalList<T> list = InternalList<T>.Empty;`
 
 2. Passing this structure by value is dangerous because changes to a copy of the structure may or may not be reflected in the original list. In particular the `_count` of the original list won't change but the contents of `_array` _may_ change. It's best not to pass it around at all, but if you must pass it, pass it by reference. This also implies that an `InternalList<T>` should not be exposed by any `public` API, and storing `InternalList<T>` inside another collection (e.g. `Dictionary<object, InternalList<T>>` can be done but must be done carefully to avoid code that _compiles_ but doesn't work as intended.
 
-Again, the fundamental problem is that when you pass `InternalList` by value, a copy of the `_count` and `_array` variables is made. Changes to those variables do not affect the other copies, but changes to the _elements_ of `_array` _do_ affect other copies. If you want to return an internal list from a public API you can cast it to `IList<T>` or `IReadOnlyList<T>`, but be aware that future changes made to the `InternalList` by your code may not be reflected properly in client code, and vice versa. 
+Again, the fundamental problem is that when you pass `InternalList` by value, a copy of the `_count` and `_array` variables is made. Changes to those variables do not affect the other copies, but changes to the _elements_ of `_array` _do_ affect other copies (incidentally, this is similar to the mutation behavior of [slices in D](http://dlang.org/d-array-article.html)). If you want to return an internal list from a public API you can cast it to `IList<T>` or `IReadOnlyList<T>`, but be aware that future changes made to the `InternalList` by your code may not be seen properly by clients using the `IList<T>`, and vice versa.
 
 Finally, alongside `InternalList<T>`, there is a `static class InternalList` that has some static methods (`CopyToNewArray`, `Insert`, `RemoveAt`, `Move` to help manage raw arrays. Most methods of `InternalList<T>` simply call methods of `InternalList`.
 

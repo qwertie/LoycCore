@@ -46,7 +46,7 @@ _totalCount = 1000
 
 From the outside it appears to be a list of 1000 items, but in reality there are only three.
 
-This kind of list may resemble a `SortedDictionary<int,T>` but there is a big difference: you can _insert and remove_ ranges of indexes, which efficiently "shifts" the indexes of all items above the affected index. For example, if I add one million real items to a `SparseAList<T>`, I can do `list.InsertSpace(0, 1000)` and this will increase the index of all existing items by 1000 (in O(log N) time).
+This kind of list may resemble a `SortedDictionary<int,T>` but there is a big difference: you can _insert and remove_ ranges of indexes, which efficiently "shifts" the indexes of all items above the affected index. For example, if I add one million real items to a `SparseAList<T>`, I can do `list.InsertSpace(0, 1000)` and this will increase the index of all one million items by 1000 (in O(log N) time).
 
 `SparseAList<T>` implements my `ISparseListSource<T>` and `ISparseList<T>` interfaces. Compared to a normal list, a sparse list offers the following additional methods:
 
@@ -160,7 +160,7 @@ This kind of list may resemble a `SortedDictionary<int,T>` but there is a big di
 
 ## `SparseAList<T>` for syntax highlighting
 
-The first version of my syntax highlighter simply kept track of the lexer state at the beginning of each line. This basically worked, but there was a challenge or two [I forgot the details because it's been many months since I worked on it], and it didn't allow me to efficiently add "higher-level" syntax highlighting. I wanted to offer syntax highlighting not just of tokens, but also of higher-level elements (using C# as an example, imagine highlighting data types and method names).
+The first version of my syntax highlighter for [LES](https://github.com/qwertie/LoycCore/wiki/Loyc-Expression-Syntax) simply kept track of the lexer state at the beginning of each line. This basically worked, but there was a challenge or two [I forgot the details because it's been many months since I worked on it], and it didn't allow me to efficiently add "higher-level" syntax highlighting. I wanted to offer syntax highlighting not just of tokens, but also of higher-level elements (using C# as an example, imagine highlighting data types and method names).
 
 The simplest way to do this is to parse the entire file, which is slow. I did not (and don't) know how to achieve incremental parsing, but I felt that I could at least achieve incremental _lexing_, which would speed up the parsing process because lexical analysis tends to account for around half of total parsing time. My idea is that I would build a list of all non-space tokens in the file and the location where each token starts. Then, when the user types stuff, I would re-lex a small region starting before the edit location, in real time, an this would be a very fast operation (most of the time, anyway). The parser would still have to reprocess the entire file, but it would run on a timer, waiting at least one second or so between each parse. This parser would run on a background thread and could operate on a frozen version of the token list in case it changes on the other thread (remember, `AList` supports fast cloning).
 
@@ -195,7 +195,7 @@ But, this is really a story for another article. Remind me to write one...
 
 ## Benchmarks
 
-I finally got around to doing a few simple benchmarks on a new workstation PC. Fair warning, I only tested `AList` and `BDictionary`, not any of the others like `SparseAList` or `BMultiMap`.
+I finally got around to doing a few simple `AList` benchmarks on a new workstation PC. Fair warning, I only tested `AList` and `BDictionary`, not any of the others like `SparseAList` or `BMultiMap`.
 
 The first test scenario is this:
 
@@ -209,7 +209,7 @@ First the good news: `AList<T>` has dramatically better performance than `List<T
 ![Results](bm-insert-at-random-indexes.png)
 ![Results](bm-remove-at-random-indexes.png)
 
-What's `DList<T>`? It's a direct competitor to the standard `List<T>`, and a simpler alternative to `AList<T>`. I wrote a [separate article about the DList](http://core.loyc.net/collections/dlist.html).
+What's `DList<T>`? It's a direct competitor to the standard `List<T>`, and a simpler alternative to `AList<T>`. I wrote a [separate article about the DList](dlist.html).
 
 The raw timings for a million-item list are
 
@@ -231,7 +231,7 @@ In fact, for small lists (under 100 items), `List<T>` is about twice as fast.
 
 ![Add-at-end benchmark](bm-insert-at-end.png)
 
-This scenario is to start with a `IList<long>` of a certain size and just add 100,000 more items. `AList<T>` just sucks at that, at least compared to `List<T>` and `DList<T>`, both of which usually complete the task in one millisecond or less (why the sudden "slowness" of `DList<T>` at 3 million items? Probably at some point during the 100,000 iterations, the `DList` had to enlarge its internal array of 3 million items.)
+This scenario is to start with a `IList<long>` of a certain size and just add 100,000 more items. `AList<T>` just sucks at that, at least compared to `List<T>` and `DList<T>`, both of which usually complete the task in one millisecond or less.
 
 I also the tested the speed of
 
@@ -248,12 +248,12 @@ I also the tested the speed of
 		for (int c = 0; c < Cycles; c++)
 			avg = list.Average(); // LINQ scans the collection with `IEnumerator`
 
-Here, `Cycles` is chosen so that `Cycles * list.Count = 10_000_000` (exception: `Cycles = 3` at 3 million items). 
+Here, `Cycles` is chosen so that `Cycles * list.Count = 10_000_000`.
 
 `AList<T>` is a more complex data structure, so it is traversed more slowly than `List<T>` and `DList<T>`.
 
 ![Scan results](bm-scan-by-IEnumerator.png)
-![Scan results](bm-scan-by-[index].png)
+![Scan results](bm-scan-by-index.png)
 
 Notice that the `IEnumerator` of `AList` has a constant speed while the `[indexer]` of `AList` gets slower for large lists. That's because the indexer requires O(log N) time while `IEnumerator<T>.MoveNext` is an O(1) operation. However, the `AList` enumerator tends to be slower for short lists, maybe because the enumerator needs more time to initialize (except for very short lists that contain only a leaf node, the enumerator allocates a small array--a traversal stack--when enumeration starts.)
 
@@ -263,7 +263,14 @@ I noticed that `DList<T>` wasn't getting as much of a performance boost through 
 
 ### Dictionary benchmarks
 
-I did a single simple benchmark for five kinds of `<long, int>` dictionaries (`Dictionary`, `MMap`, `BDictionary`, `SortedDictionary` and `SortedList`). The results are clear:
+I did a single simple benchmark for five kinds of `<long, int>` dictionaries (`Dictionary`, `MMap`, `BDictionary`, `SortedDictionary` and `SortedList`). The test setup was:
+
+1. Create a dictionary with a sequence of integers starting at zero, where each new integer equals the last integer plus a random number between 50 and 150. Record the largest integer.
+2. Start timer.
+3. 100,000 times, pick an integer at random between 0 and the largest integer. Insert this integer into the list, and then (if the list size increased) remove it again.
+4. Measure time.
+
+The results are clear:
 
 ![Results](bm-dictionary-random-add+remove.png)
 
