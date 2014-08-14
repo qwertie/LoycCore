@@ -158,6 +158,8 @@ This kind of list may resemble a `SortedDictionary<int,T>` but there is a big di
 	}
 ~~~
 
+`SparseAList` supports all the usual features of `AList` such as fast cloning and change notifications ("tree observers" are not currently supported, but I doubt anyone ever uses them.)
+
 ## `SparseAList<T>` for syntax highlighting
 
 The first version of my syntax highlighter for [LES](https://github.com/qwertie/LoycCore/wiki/Loyc-Expression-Syntax) simply kept track of the lexer state at the beginning of each line. This basically worked, but there was a challenge or two [I forgot the details because it's been many months since I worked on it], and it didn't allow me to efficiently add "higher-level" syntax highlighting. I wanted to offer syntax highlighting not just of tokens, but also of higher-level elements (using C# as an example, imagine highlighting data types and method names).
@@ -284,7 +286,7 @@ It should be noted that sorted dictionaries is normally slower than unsorted dic
 
 To my disappointment, `BDictionary<K,V>` is usually slower than `SortedDictionary<K,V>`. On the plus side, `BDictionary<K,V>` uses less memory than `SortedDictionary<K,V>` because it packs its items into arrays. In contrast, `SortedDictionary` is a red-black tree that allocates a separate heap object for every pair (node) in the dictionary. The overhead of this is 5 words per item, typically 40 bytes in a 64-bit process (that's two words for the object header, two words for references to the left and right children of each node, and one word for the "red" flag of the [red-black tree](http://en.wikipedia.org/wiki/Red%E2%80%93black_tree)). It should also be noted that `SortedDictionary<K,V>` can cause more stress on the garbage collector than `BDictionary<K,V>` because it contains so many references; I expect this only affects performance significantly in apps with large heaps.
 
-Although its speed is merely O.K., `BDictionary<K,V>` is often a better choice than `SortedDictionary<K,V>` because it supports many operations, such as "find next higher key", "split list into two pieces", and "get item by index" that `SortedDictionary<K,V>` does not.
+Although its speed is merely O.K., `BDictionary<K,V>` is often a better choice than `SortedDictionary<K,V>` because it supports many operations, such as "find next higher key", "split list into two pieces", "observe changes" and "clone instantly" that `SortedDictionary<K,V>` does not.
 
 ## Download!
 
