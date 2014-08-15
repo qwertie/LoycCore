@@ -1,6 +1,7 @@
 ---
 title: "InternalList&lt;T>: the low-level List&lt;T>"
 layout: article
+toc: true
 ---
 
 ## Introduction
@@ -126,6 +127,38 @@ But it should be understood that `InternalList` is only meant for rare cases whe
 Again, the fundamental problem is that when you pass `InternalList` by value, a copy of the `_count` and `_array` variables is made. Changes to those variables do not affect the other copies, but changes to the _elements_ of `_array` _do_ affect other copies (incidentally, this is similar to the mutation behavior of [slices in D](http://dlang.org/d-array-article.html)). If you want to return an internal list from a public API you can cast it to `IList<T>` or `IReadOnlyList<T>`, but be aware that future changes made to the `InternalList` by your code may not be seen properly by clients using the `IList<T>`, and vice versa.
 
 Finally, alongside `InternalList<T>`, there is a `static class InternalList` that has some static methods (`CopyToNewArray`, `Insert`, `RemoveAt`, `Move` to help manage raw arrays. Most methods of `InternalList<T>` simply call methods of `InternalList`.
+
+## Benchmarks
+
+The main purpose of `InternalList<T>` is to save memory, but occasionally you'll notice a speed difference. 
+
+I temporarily tweaked my list benchmarks from the [List Trifecta] series. Generally `InternalList<T>` performs identically to `List<T>` except that this linear scan for-loop can read the list 55% faster (i.e. 34% less time).
+
+	long sum = 0;
+	for (int c = 0; c < Cycles; c++) {
+		sum = 0;
+		for (int i = 0; i < list.Count; i++)
+			sum += list[i];
+	}
+
+![Scan by index results](bm-internal-list-scan-by-index.png)
+
+The `IEnumerator` is (of course) not faster but not notably slower. However, notice that scanning via `IEnumerator` takes a full 10 times as much time as a plain `for` loop (a `foreach` loop on `InternalList<T> L` may be much faster than a `foreach` loop on `(IEnumerable<T>)L`, but I didn't benchmark that, sorry. I'm kinda busy.)
+
+	double avg = 0;
+	for (int c = 0; c < Cycles; c++)
+		avg = list.Average(); // uses IEnumerator<long>
+
+![results](bm-internal-list-scan-by-IEnumerator.png)
+
+"Filling" is slightly slower if you don't set `Capacity` in advance because `InternalList<T>` enlarges itself 23.9% more often in order to save a little memory. Note: the graph is almost meaningless because the timer resolution is too poor and because the most expensive part of `Add` is enlarging the internal array; `List` and `InternalList` do this at different sizes and there aren't enough data points to definitively see what is going on.
+
+![results](bm-internal-list-insert-at-end.png)
+
+The other results are pretty much the same as `List<T>`.
+
+![results](bm-internal-list-insert-at-random-indexes-.png)
+![results](bm-internal-list-remove-at-random-indexes-.png)
 
 ## Download
 

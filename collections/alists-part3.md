@@ -2,6 +2,7 @@
 title: The List Trifecta, part 3
 tagline: SparseAList and some AList benchmarks
 layout: article
+toc: true
 ---
 
 ## `SparseAList<T>`

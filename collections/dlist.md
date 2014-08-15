@@ -1,6 +1,7 @@
 ---
 title: "DList&lt;T>: The circular List&lt;T>"
 layout: article
+toc: true
 ---
 
 ## Introduction

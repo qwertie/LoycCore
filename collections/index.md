@@ -14,4 +14,4 @@ title: Articles on Loyc.Collections
 
 See also:
 
-- [Loyc.Essentials: Collection interfaces]({{site.baseurl}}/2014/using-loycessentials-collection.html)
+- [Loyc.Essentials: Collection interfaces](http://loyc.net/2014/using-loycessentials-collection.html)
