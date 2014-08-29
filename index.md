@@ -9,6 +9,8 @@ The Loyc Core project is a set of general-purpose .NET libraries. LoycCore is es
 
 Contributors are welcome: more unit tests, code reviews, and new features are desired, anything relatively small (under about 3000 lines of code) that fits the theme "__things that should be built into the .NET framework, but aren't__".
 
+I strive to meet any 4 of the following 5 criteria for all code in these libraries: well-designed, well-documented, well-tested, well-written (concise/beautiful), and high-performance.
+
 The libraries are:
 
 - **[Loyc.Essentials.dll](https://github.com/qwertie/LoycCore/wiki/Loyc.Essentials)**: a library of interfaces, extension methods, and small bits of functionality that are useful in virtually any software project. About half of **Loyc.Essentials** is devoted to collections: collection interfaces, collection adapters, collection extension methods and even a couple of collection implementations (most notably `DList<T>`). The other half includes a variety of things including math, geometry, `Symbol`s, localization, `Pair<A,B>`, "message sinks" and more.
