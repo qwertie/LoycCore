@@ -11,10 +11,10 @@ Contributors are welcome: more unit tests, code reviews, and new features are de
 
 The libraries are:
 
-- **Loyc.Essentials.dll**: a library of interfaces, extension methods, and small bits of functionality that are useful in virtually any software project. About half of **Loyc.Essentials** is devoted to collections: collection interfaces, collection adapters, collection extension methods and even a couple of collection implementations (most notably `DList<T>`). The other half includes a variety of things including math, geometry, `Symbol`s, localization, `Pair<A,B>`, "message sinks" and more.
-- **Loyc.Collections.dll**: a library of sophisticated data structures including [ALists][1], [VLists][2], and my favorite, the hash tree types `Set<T>`, `MSet<T>`, `Map<T>` and `MMap<T>`.
-- **Loyc.Syntax.dll**: Contains a parser for [Loyc Expression Syntax (LES)][3], and various interfaces and base classes for Loyc Languages and for users of LLLPG.
-- **Loyc.Utilities.dll**: Additional functionality that is either (A) not important enough to be placed in **Loyc.Essentials.dll** or (B) takes **Loyc.Collections.dll** as a dependency.
+- **[Loyc.Essentials.dll](https://github.com/qwertie/LoycCore/wiki/Loyc.Essentials)**: a library of interfaces, extension methods, and small bits of functionality that are useful in virtually any software project. About half of **Loyc.Essentials** is devoted to collections: collection interfaces, collection adapters, collection extension methods and even a couple of collection implementations (most notably `DList<T>`). The other half includes a variety of things including math, geometry, `Symbol`s, localization, `Pair<A,B>`, "message sinks" and more.
+- **[Loyc.Collections.dll](https://github.com/qwertie/LoycCore/wiki/Loyc.Collections)**: a library of sophisticated data structures including [ALists][1], [VLists][2], and my favorite, the hash tree types `Set<T>`, `MSet<T>`, `Map<T>` and `MMap<T>`.
+- **[Loyc.Syntax.dll](https://github.com/qwertie/LoycCore/wiki/Loyc.Syntax)**: Contains a parser for [Loyc Expression Syntax (LES)][3], and various interfaces and base classes for Loyc Languages and for users of LLLPG.
+- **[Loyc.Utilities.dll](https://github.com/qwertie/LoycCore/wiki/Loyc.Utilities)**: Additional functionality that is either (A) not important enough to be placed in **Loyc.Essentials.dll** or (B) takes **Loyc.Collections.dll** as a dependency.
 
   [1]: http://www.codeproject.com/Articles/568095/The-List-Trifecta-Part
   [2]: http://www.codeproject.com/Articles/26171/VList-data-structures-in-C
