@@ -10,6 +10,7 @@ Help wanted!
 This project includes Loyc.Essentials, Loyc.Collections, Loyc.Syntax and Loyc.Utilities.
 
 - Status: In fairly good shape
+- TODO: more unit tests. Some of the simplest methods may be broken if they've never been called
 - TODO: Add more 3D point math
 - TODO: Add N-dimensional points and integrate them nicely with 2- and 3-dimensional points
 - TODO: Add matrix math. Affine and perspective transforms, matrix inverse, etc.
@@ -22,14 +23,13 @@ This project includes Loyc.Essentials, Loyc.Collections, Loyc.Syntax and Loyc.Ut
 ## LES: a compact representation of Loyc trees as plain text
 
 - Parser: supports the basics. Line breaks are always ignored, contrary to spec.
-    - TODO: Python mode, recognize line breaks
+    - Soon: Python mode
     - TODO: consider supporting additional literal types, e.g. BigInteger
 - Printer: 
-    - VERY basic, pure prefix notation only
-    - TODO: good-looking output
+    - Basic: supports operator notation and braced blocks
+    - TODO: superexpressions, `indexed[expressions]`, `generic!T` notation
 - Syntax highlighting:
-    - Visual Studio: supports token highlighting only using actual LES lexer, does not highlight superexpression "keywords".
-        - TODO: rewrite the highlighter using LES lexer and parser. I already wrote the `SparseAList<T>` class for the specific purpose of storing token boundaries in the syntax highlighting engine.
+    - Visual Studio: COMPLETE.
     - Notepad++ UDL: exists in GitHub repo at 
         Visual Studio Integration\notepad++userDefinedLang_les.xml 
       with a second version for black background: notepad++userDefinedLang_les_dark.xml

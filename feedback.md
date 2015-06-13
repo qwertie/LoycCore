@@ -1,5 +1,5 @@
 ---
-title: Feedback
+title: Feedback / Contact
 layout: page
 commentIssueId: 1
 ---
