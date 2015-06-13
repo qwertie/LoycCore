@@ -26,7 +26,7 @@ This project includes Loyc.Essentials, Loyc.Collections, Loyc.Syntax and Loyc.Ut
     - Soon: Python mode
     - TODO: consider supporting additional literal types, e.g. BigInteger
 - Printer: 
-    - Basic: supports operator notation and braced blocks
+    - Basic: supports operator notation, braced blocks, and comment trivia
     - TODO: superexpressions, `indexed[expressions]`, `generic!T` notation
 - Syntax highlighting:
     - Visual Studio: COMPLETE.
