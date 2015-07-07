@@ -20,14 +20,13 @@ This project includes Loyc.Essentials, Loyc.Collections, Loyc.Syntax and Loyc.Ut
 
 - Done: LNode class (Src/Loyc.Syntax/Nodes/LNode.cs) and derived classes
 
-## LES: a compact representation of Loyc trees as plain text
+## LES: a C-like representation of Loyc trees as plain text
 
-- Parser: supports the basics. Line breaks are always ignored, contrary to spec.
-    - Soon: Python mode
+- Parser: done.
     - TODO: consider supporting additional literal types, e.g. BigInteger
 - Printer: 
     - Basic: supports operator notation, braced blocks, and comment trivia
-    - TODO: superexpressions, `indexed[expressions]`, `generic!T` notation
+    - TODO: superexpressions, `indexed[expressions]`, `generic!T` notation, tuples
 - Syntax highlighting:
     - Visual Studio: COMPLETE.
     - Notepad++ UDL: exists in GitHub repo at 
