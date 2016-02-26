@@ -108,16 +108,16 @@ Concretely, suppose that an item is added to node `0x9` (e.g. something whose ha
 
 The thawing process isn't done yet. At this point, the following stuff exists in memory:
 
-! Unfrozen copy              _root**
-** IsFrozen=true               |
-                               |
-      +---------+---------+----+----+---------+---------+
-      |         |         |         |         |         |
-     0x2       0x3       0x6       0x7       0x9       0xF        0x9!
-                |                   |         |                    |
-             +--+--+                |      +--+--+-----------------+
-             |     |                |      |     |
-           0x13   0x73             0x57  0x09** 0x59**
+    ! Unfrozen copy              _root**
+    ** IsFrozen=true               |
+                                   |
+          +---------+---------+----+----+---------+---------+
+          |         |         |         |         |         |
+         0x2       0x3       0x6       0x7       0x9       0xF        0x9!
+                    |                   |         |                    |
+                 +--+--+                |      +--+--+-----------------+
+                 |     |                |      |     |
+               0x13   0x73             0x57  0x09** 0x59**
 
 A new `0x9` node has been created. It shares the same children (0x09 and 0x59) as the old one, and it has **not** been inserted into the tree yet.
 
