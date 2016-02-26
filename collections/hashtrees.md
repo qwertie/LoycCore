@@ -3,7 +3,7 @@ layout: article
 title: A flexible family of hash trees
 toc: true
 ---
-You can make "sets" in the .NET framework with the standard `HashSet<T>` class, but it is a little inconvenient compared to using ordinary numbers.
+You can make "sets" in the .NET framework with the standard [`HashSet<T>`](https://msdn.microsoft.com/en-us/library/bb359438.aspx) class, but it is a little inconvenient compared to using ordinary numbers.
 
 To demonstrate this, consider how easy it is to pass one number to a method:
 
@@ -67,10 +67,10 @@ You can use the `set1 | set2` to merge sets, `set1 & set2` to compute an interse
 
 Loyc.Collections.dll includes 4 "main" set types:
 
-- [`Set<T>`](http://loyc.net/doc/code/structLoyc_1_1Collections_1_1Set_3_01T_01_4.html) is an immutable set with several operators for combining sets, as you've seen. These operators also have ordinary method forms: you can say `set1.Union(set2)` rather than `set1 | set2` if that seems clearer to you. As with `HashSet`, there are also several boolean methods like `IsSubsetOf(s)` and `SetEquals(s)`. `Set<T>` implements the `ISetImm<T>` interface, which is the immutabe equivalent to the standard `ISet<T>` interface.
+- [`Set<T>`](http://loyc.net/doc/code/structLoyc_1_1Collections_1_1Set_3_01T_01_4.html) is an immutable set with several operators for combining sets, as you've seen. These operators also have ordinary method forms: you can say `set1.Union(set2)` rather than `set1 | set2` if that seems clearer to you. As with `HashSet`, there are also several boolean methods like `IsSubsetOf(s)` and `SetEquals(s)`. `Set<T>` implements the [`ISetImm<T>`](http://loyc.net/doc/code/interfaceLoyc_1_1Collections_1_1ISetImm_3_01T_01_4.html) interface, which is the immutabe equivalent to the standard [`ISet<T>`](https://msdn.microsoft.com/en-us/library/dd412081(v=vs.110).aspx) interface.
 - [`MSet<T>`](http://loyc.net/doc/code/classLoyc_1_1Collections_1_1MSet_3_01T_01_4.html) is a mutable set, much like `HashSet<T>`, but more convenient since it has all the same operators as `Set<T>`. Plus, you can cast from `MSet` to `Set` or vice versa in constant time (instantly).
-- [`Map<Key,Value>`](http://loyc.net/doc/code/classLoyc_1_1Collections_1_1Map_3_01K_00_01V_01_4.html) is an immutable map of key-value pairs, with convenient methods to create derived maps, e.g. `map.With(key, value)` creates a map with an additional item, while `map.Union(map2)` adds all the items from `map2` that are not already present in `map`.
-- [`MMap<Key,Value>`](http://loyc.net/doc/code/classLoyc_1_1Collections_1_1MMap_3_01K_00_01V_01_4.html) is a mutable map of key-value pairs. It works exactly like `Dictonary<Key,Value>` except that it has the same extra capabilities as `Map` does. Plus, you can cast from `MSet` to `Set` or vice versa in constant time (instantly).
+- [`Map<Key,Value>`](http://loyc.net/doc/code/classLoyc_1_1Collections_1_1Map_3_01K_00_01V_01_4.html) is an immutable dictionary of key-value pairs, with convenient methods to create derived maps, e.g. `map.With(key, value)` creates a map with an additional item, while `map.Union(map2)` adds all the items from `map2` that are not already present in `map`.
+- [`MMap<Key,Value>`](http://loyc.net/doc/code/classLoyc_1_1Collections_1_1MMap_3_01K_00_01V_01_4.html) is a mutable dictionary of key-value pairs. It works exactly like `Dictonary<Key,Value>` except that it has the same extra capabilities as `Map` does. Plus, you can cast from `MSet` to `Set` or vice versa in constant time (instantly).
 
 Finally, I wrote an extra class [`InvertibleSet<T>`](http://loyc.net/doc/code/classLoyc_1_1Collections_1_1InvertibleSet_3_01T_01_4.html) which is similar to `Set<T>`, except that it represents a set that may be inverted. For example, you could store a set of numbers `{2, 3, 5, 7}`, or you could have an _inverted_ set of "all numbers except `{2, 3, 5, 7}`".
 
@@ -108,16 +108,16 @@ Concretely, suppose that an item is added to node `0x9` (e.g. something whose ha
 
 The thawing process isn't done yet. At this point, the following stuff exists in memory:
 
-    ! Unfrozen copy              _root**
-    ** IsFrozen=true               |
-                                   |
-          +---------+---------+----+----+---------+---------+
-          |         |         |         |         |         |
-         0x2       0x3       0x6       0x7       0x9       0xF        0x9!
-                    |                   |         |                    |
-                 +--+--+                |      +--+--+-----------------+
-                 |     |                |      |     |
-               0x13   0x73             0x57  0x09** 0x59**
+! Unfrozen copy              _root**
+** IsFrozen=true               |
+                               |
+      +---------+---------+----+----+---------+---------+
+      |         |         |         |         |         |
+     0x2       0x3       0x6       0x7       0x9       0xF        0x9!
+                |                   |         |                    |
+             +--+--+                |      +--+--+-----------------+
+             |     |                |      |     |
+           0x13   0x73             0x57  0x09** 0x59**
 
 A new `0x9` node has been created. It shares the same children (0x09 and 0x59) as the old one, and it has **not** been inserted into the tree yet.
 
