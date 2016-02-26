@@ -63,7 +63,7 @@ Surely, though, this could be much more convenient. And with Loyc's `Set` type, 
     Method1(set1 | set2);
     Method2(set1 - set2);
 
-You can use the `set1 | set2` to merge sets, `set1 & set2` to compute an intersection, `set1 ^ set2` to get the exclusive or (items that are in one set but not the other), and, of course, `-` computes the difference between two sets. Finally, you and use `+` and `-` to add or remove a single item (e.g. `set2 + 13.0` creates a new set that contains `13.0`, leaving the original `set2` unchanged.)
+You can use the `set1 | set2` to merge sets, `set1 & set2` to compute an intersection (items that exist in both sets), `set1 ^ set2` gets the exclusive-or (items that are in one set but not the other), and `set1 - set2` starts with a copy of `set1` and "subtracts" (removes) all items that are in `set2`. Finally, you and use `+` and `-` to add or remove a single item (e.g. `set2 + 13.0` creates a new set that contains `13.0`, leaving the original `set2` unchanged.)
 
 Loyc.Collections.dll includes 4 "main" set types:
 
@@ -72,7 +72,7 @@ Loyc.Collections.dll includes 4 "main" set types:
 - [`Map<Key,Value>`](http://loyc.net/doc/code/classLoyc_1_1Collections_1_1Map_3_01K_00_01V_01_4.html) is an immutable map of key-value pairs, with convenient methods to create derived maps, e.g. `map.With(key, value)` creates a map with an additional item, while `map.Union(map2)` adds all the items from `map2` that are not already present in `map`.
 - [`MMap<Key,Value>`](http://loyc.net/doc/code/classLoyc_1_1Collections_1_1MMap_3_01K_00_01V_01_4.html) is a mutable map of key-value pairs. It works exactly like `Dictonary<Key,Value>` except that it has the same extra capabilities as `Map` does. Plus, you can cast from `MSet` to `Set` or vice versa in constant time (instantly).
 
-Finally, I wrote an extra class `InvertibleSet<T>` which is similar to `Set<T>`, except that it represents a set that may be inverted. For example, you could store a set of numbers `{2, 3, 5, 7}`, or you could have an _inverted_ set of "all numbers except `{2, 3, 5, 7}`".
+Finally, I wrote an extra class [`InvertibleSet<T>`](http://loyc.net/doc/code/classLoyc_1_1Collections_1_1InvertibleSet_3_01T_01_4.html) which is similar to `Set<T>`, except that it represents a set that may be inverted. For example, you could store a set of numbers `{2, 3, 5, 7}`, or you could have an _inverted_ set of "all numbers except `{2, 3, 5, 7}`".
 
 As with all of my collections, the set classes have a richer set of functionality than the standard .NET framework classes. For example, there is an `AddOrFind(ref item, bool replaceIfPresent)` method in `MSet` and `MMap` that allows you to add a new item and/or retrieve a matching item that already exists. And `MMap` has a method `GetAndRemove(K key, ref V valueRemoved)` that allows you to delete a pair while also retrieving the value associated with that pair.
 
@@ -145,6 +145,12 @@ For a more complete explanation of how `InternalSet` works, please read the
 
 Download today!
 ---------------
+
+The bottom line: 
+
+- `Set`, `MSet`, `Map` and `MMap` are very convenient to use.
+- They allow you to write APIs that clearly indicate whether or not they modify sets that are given to them: `MSet` and `MMap` can be modified, while `Set` and `Map` cannot.
+- They are optimized to avoid wasting memory, by sharing memory between similar sets.
 
 All the set and map types showcased here are part of Loyc.Collections.dll in the Loyc Core package, available on NuGet. Learn more at [core.loyc.net](http://core.loyc.net).
 
