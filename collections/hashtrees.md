@@ -85,7 +85,7 @@ In fact, all of these "set" and "map" classes are built on a single engine, a va
 
 Don't worry too much if you don't understand what I'm saying very well: this is just a summary, it's not meant to be a complete explanation, and teaching advanced computer science concepts is outside the scope of this article. You can use these classes without knowing how they work, but if you already understand how trees and hashtables work, then hopefully as you read on, you'll get a rough idea of what's going on. And if not, you can either (A) give up now, or (B) study [trees](https://en.wikipedia.org/wiki/Tree_(data_structure)), [tries](https://en.wikipedia.org/wiki/Trie) and [hashtables](https://en.wikipedia.org/wiki/Hash_table) first, then come back here, because `InternalSet` is basically a cross between a tree/trie and a hashtable.
 
-Now, in order to "instantly" convert a mutable set into an immutable one, the tree has a "frozen" flag which simply has to be set on the root node (child nodes are also marked frozen incrementally, as the tree is modified; the rest of the tree is marked frozen immediately because this would slow down the conversion process). When an "immutable" tree like `Set<int>` is converted to `MSet<int>`, the root node is already marked frozen, but `MSet<int>` doesn't mind; it has copy-on-write behavior, so that parts of the tree are automatically "thawed" whenever you change the set.
+Now, in order to "instantly" convert a mutable set into an immutable one, the tree has a "IsFrozen" flag which simply has to be set on the root node (child nodes are also marked frozen incrementally, as the tree is modified; the rest of the tree is not marked frozen immediately because this would slow down the conversion process). Both trees (the `Set` and the `MSet`) will then share the same tree. When an "immutable" tree like `Set<int>` is converted to `MSet<int>`, the root node is already marked frozen, but `MSet<int>` doesn't care; it has copy-on-write behavior, so that parts of the tree are automatically "thawed" whenever you change the set.
 
 To see how thawing (i.e. converting from frozen to unfrozen) works, let's suppose you start with a tree with the following 12 nodes:
 
@@ -104,7 +104,24 @@ Each node contains up to 16 nodes and/or children, and the sum of nodes and chil
 
 Since the root node is frozen, all the others are also frozen by implication, even if (as shown here) their own `IsFrozen` flag is not set. Now, in order to add one new item to the tree, some of the nodes will have to be duplicated in order to "unfreeze" them. 
 
-Concretely, suppose that an item is added to node `0x9` (e.g. something whose hashcode ends in `0x39` could go in this node). Before the new item can be placed in node `0x9`, that node must be thawed. To thaw it, an unfrozen copy is made, leaving the original untouched. The copy is not frozen (`IsFrozen==false`), but it does point to the same frozen children. So the new `0x9` node will point to the same two children (`0x09` and `0x59`), and a for-loop sets the `IsFrozen` flag of each child of the duplicated node. Then, the new item is added to the copy of node 0x9. Next, the `_root` is also unfrozen by making a copy of it with `IsFrozen=false`. Again, a for-loop sets the `IsFrozen` flag of each frozen child, and then child slot `0x9` in the root is replaced with the new copy of 0x9 (which has the new item).
+Concretely, suppose that an item is added to node `0x9` (e.g. something whose hashcode ends in `0x39` could go in this node). Before the new item can be placed in node `0x9`, that node must be thawed. To thaw it, an unfrozen copy is made, leaving the original untouched. The copy is not frozen (`IsFrozen==false`), but it does point to the same frozen children. So the new `0x9` node will point to the same two children (`0x09` and `0x59`), and a for-loop sets the `IsFrozen` flag of each child of the duplicated node. Then, the new item is added to the copy of node 0x9.
+
+The thawing process isn't done yet. At this point, the following stuff exists in memory:
+
+! Unfrozen copy              _root**
+** IsFrozen=true               |
+                               |
+      +---------+---------+----+----+---------+---------+
+      |         |         |         |         |         |
+     0x2       0x3       0x6       0x7       0x9       0xF        0x9!
+                |                   |         |                    |
+             +--+--+                |      +--+--+-----------------+
+             |     |                |      |     |
+           0x13   0x73             0x57  0x09** 0x59**
+
+A new `0x9` node has been created. It shares the same children (0x09 and 0x59) as the old one, and it has **not** been inserted into the tree yet.
+
+Next, the `_root` is also unfrozen by making a copy of it with `IsFrozen=false`. Again, a for-loop sets the `IsFrozen` flag of each frozen child, and then child slot `0x9` in the root is replaced with the new copy of 0x9 (which has the new item).
 
 This concludes the thawing process. At this point, just two nodes are actually unfrozen, and the modified tree looks like this:
 
@@ -119,8 +136,7 @@ This concludes the thawing process. At this point, just two nodes are actually u
                  |     |                |      |     |
                0x13   0x73             0x57  0x09** 0x59**
 
-There are 12 nodes here and 2 have been copied. The other 10 nodes are still shared between the modified tree and the clone. Next, if you add an item to node `0x6`, only that one node has to be thawed; the root has already been thawed and there is no need to make another copy of it. Due to the 
-random nature of hashcodes, it is probable that as you modify the set after cloning it, it is typical for each modification to require approximately one node to be thawed, until the majority of the nodes have been thawed.
+Out of the 12 nodes on this diagram, 2 of them have been copied (the original 2 are not shown), and the other 10 nodes are still shared between the modified tree and the original. Next, if you add an item to node `0x6`, only that one node has to be thawed; the root has already been thawed and there is no need to make another copy of it. Due to the random nature of hashcodes, it is probable that as you modify the set after cloning it, it is typical for each modification to require approximately one node to be thawed, until the majority of the nodes have been thawed.
 
 `InternalSet` does not thaw unnecessarily. If you try to remove an item that is not present, none of the tree will be thawed. If you add an item that is already present in a frozen node (and you do not ask for replacement), that node will not be thawed. `Contains()` and `Find()` never cause thawing.
 
