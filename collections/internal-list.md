@@ -52,29 +52,33 @@ Note that the `_items[index]` operation implicitly contains a range check: the C
 
 Unfortunately, if you use a plain array instead, you can't simply "add" or "remove" items, since an array has a single fixed size. Consequently if you decide that you really want a plain array but you need to add, remove, or (heaven forbid!) insert items, you'll end up pretty much reimplementing `List<T>` by yourself. You'll have an array variable and a count variable...
 
-    private T[] _array;
-    private int _count;
+~~~csharp
+private T[] _array;
+private int _count;
+~~~
 
 and then you might write a bunch of code to do the things that `List<T>` already does, like insertions:
 
-    static T[] Insert<T>(int index, T item, T[] array, ref int count)
-    {
-        Debug.Assert((uint)index <= (uint)count);
-        if (count == array.Length) {
-            int newCap = array.Length * 2;
-            array = CopyToNewArray(array, count, newCap);
-        }
-        for (int i = count; i > index; i--)
-            array[i] = array[i - 1];
-        array[index] = item;
-        count++;
-        return array;
+~~~csharp
+static T[] Insert<T>(int index, T item, T[] array, ref int count)
+{
+    Debug.Assert((uint)index <= (uint)count);
+    if (count == array.Length) {
+        int newCap = array.Length * 2;
+        array = CopyToNewArray(array, count, newCap);
     }
-    static T[] CopyToNewArray<T>(T[] _array, int _count, int newCapacity)
-    {
-        T[] a = new T[newCapacity];
-        Array.Copy(_array, a, _count);
-    }
+    for (int i = count; i > index; i--)
+        array[i] = array[i - 1];
+    array[index] = item;
+    count++;
+    return array;
+}
+static T[] CopyToNewArray<T>(T[] _array, int _count, int newCapacity)
+{
+    T[] a = new T[newCapacity];
+    Array.Copy(_array, a, _count);
+}
+~~~
 
 Of course, this road leads to madness. Luckily, you never need to write code like this: just use `InternalList<T>` instead!
 
@@ -82,28 +86,30 @@ Of course, this road leads to madness. Luckily, you never need to write code lik
 
 `InternalList<T>` is a drop-in substitute for `List<T>` defined like this:
 
-    [Serializable]
-    public struct InternalList<T> : IListAndListSource<T>, 
-                  IListRangeMethods<T>, ICloneable<InternalList<T>>
-    {
-        public static readonly T[] EmptyArray = new T[0];
-        public static readonly InternalList<T> Empty = new InternalList<T>(0);
+~~~csharp
+[Serializable]
+public struct InternalList<T> : IListAndListSource<T>, 
+              IListRangeMethods<T>, ICloneable<InternalList<T>>
+{
+    public static readonly T[] EmptyArray = new T[0];
+    public static readonly InternalList<T> Empty = new InternalList<T>(0);
 
-        private T[] _array;
-        private int _count;
+    private T[] _array;
+    private int _count;
 
-        public InternalList(int capacity) {...}
-        public InternalList(T[] array, int count) { _array=array; _count=count; }
-        public InternalList(IEnumerable<T> items) : this(items.GetEnumerator()) {}
-        public InternalList(IEnumerator<T> items) {}
+    public InternalList(int capacity) {...}
+    public InternalList(T[] array, int count) { _array=array; _count=count; }
+    public InternalList(IEnumerable<T> items) : this(items.GetEnumerator()) {}
+    public InternalList(IEnumerator<T> items) {}
 
-        public int Count {...}
-        public int Capacity {...}
-        public void Resize(int newSize, bool allowReduceCapacity = true) {...}
-        public void Add(T item) {...}
-        ...
-        ...
-    }
+    public int Count {...}
+    public int Capacity {...}
+    public void Resize(int newSize, bool allowReduceCapacity = true) {...}
+    public void Add(T item) {...}
+    ...
+    ...
+}
+~~~
 
 To eliminate the extra memory required by `List<T>`, InternalList is a `struct` rather a `class`; and for maximum performance, it asserts rather than throwing an exception when an incorrect array index is used, so that Release builds (where `Debug.Assert` disappears) run as fast as possible.
 
@@ -134,20 +140,24 @@ The main purpose of `InternalList<T>` is to save memory, but occasionally you'll
 
 I temporarily tweaked my list benchmarks from the [List Trifecta](http://core.loyc.net/collections/alists-part1.html) series. Generally `InternalList<T>` performs identically to `List<T>` except that this linear scan for-loop can read the list 55% faster (i.e. 34% less time).
 
-	long sum = 0;
-	for (int c = 0; c < Cycles; c++) {
-		sum = 0;
-		for (int i = 0; i < list.Count; i++)
-			sum += list[i];
-	}
+~~~csharp
+long sum = 0;
+for (int c = 0; c < Cycles; c++) {
+	sum = 0;
+	for (int i = 0; i < list.Count; i++)
+		sum += list[i];
+}
+~~~
 
 ![Scan by index results](bm-internal-list-scan-by-index.png)
 
 The `IEnumerator` is (of course) not faster but not notably slower. However, notice that scanning via `IEnumerator` takes a full 10 times as much time as a plain `for` loop (a `foreach` loop on `InternalList<T> L` may be much faster than a `foreach` loop on `(IEnumerable<T>)L`, but I didn't benchmark that, sorry. I'm kinda busy.)
 
-	double avg = 0;
-	for (int c = 0; c < Cycles; c++)
-		avg = list.Average(); // uses IEnumerator<long>
+~~~csharp
+double avg = 0;
+for (int c = 0; c < Cycles; c++)
+	avg = list.Average(); // uses IEnumerator<long>
+~~~
 
 ![results](bm-internal-list-scan-by-IEnumerator.png)
 
