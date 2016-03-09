@@ -1,5 +1,5 @@
 ---
-title: "LoycCore version history"
+title: "Version history"
 tagline: "Gathered from commit messages. Trivial changes omitted."
 layout: page
 ---
