@@ -16,6 +16,10 @@ This project includes Loyc.Essentials, Loyc.Collections, Loyc.Syntax and Loyc.Ut
 - TODO: Add matrix math. Affine and perspective transforms, matrix inverse, etc.
 - TODO: any other important functionality you think .NET framework should have but doesn't
 
+## All projects:
+
+- TODO: Make PCL (Portable Class Library) solution for Loyc Core (and the main Loyc projects like EC# & LeMP)
+
 ## Loyc trees: in-memory LISP-inspired syntax trees
 
 - Done: LNode class (Src/Loyc.Syntax/Nodes/LNode.cs) and derived classes
