@@ -30,7 +30,9 @@ And this is a waste of time and memory in case the methods _do not_ modify the s
 Introducing Loyc.Collections's set types
 ----------------------------------------
 
-I wrote a different kind of engine for storing sets, modeled after functional languages. First I will show you why these sets are easier to use, and then I will demonstrate how Loyc sets use memory more efficiently.
+I wrote a different kind of engine for storing sets, something very friendly to a functional programming style. It's a "persistent data structure"](https://en.wikipedia.org/wiki/Persistent_data_structure), which doesn't necessarily mean what you think it means.
+
+First I will show you why these sets are easier to use, and then I will demonstrate how Loyc sets use memory more efficiently.
 
 First, let's see Loyc's immutable `Set` type in action:
 
@@ -38,7 +40,7 @@ First, let's see Loyc's immutable `Set` type in action:
     Method1(set);
     Method2(set);
 
-<div class='sidebox'><b>Note</b>: currently `Set` is a value type, so happily `AsImmutable` does not allocate any memory, but I'm considering whether it should be a reference type instead, since the other three types (`MSet`, `Map` and `MMap`) are already reference types. By the way, I may add a `params` constructor in the future so you can write `new Set<double>(0.25, 0.5, 1.0, 2.0)`, avoiding the need to call `AsImmutable()`. Alternately, I might define a new `static class Set` so you can write simply `Set.New(0.25, 0.5, 1.0, 2.0)`, but in the meantime, you could always write that class yourself if you need an easy way to make sets.</div>
+<div class="sidebox"><b>Note</b>: currently `Set` is a value type, so happily `AsImmutable` does not allocate any memory, but I'm considering whether it should be a reference type instead, since the other three types (`MSet`, `Map` and `MMap`) are already reference types. By the way, I may add a `params` constructor in the future so you can write `new Set&lt;double>(0.25, 0.5, 1.0, 2.0)`, avoiding the need to call `AsImmutable()`. Alternately, I might define a new `static class Set` so you can write simply `Set.New(0.25, 0.5, 1.0, 2.0)`, but in the meantime, you could always write that class yourself if you need an easy way to make sets.</div>
 Here, we start with `MSet<double> {...}` in order to use the `{...}` notation (C# calls the `Add()` method of `MSet`, which does not exist in `Set`) and then we call `AsImmutable` to create an immutable version of the set. Since `Set` is immutable, we know—without consulting any documentation—that `Method1` and `Method2` won't modify our set.
 
 Now let's consider what we have to do if we want to pass the combination of two sets, or exclude one set from another:
