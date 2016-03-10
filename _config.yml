@@ -7,7 +7,7 @@ exclude: [Src, Lib, Visual Studio Integration]
 # Jekyll settings
 markdown: kramdown
 encoding: UTF-8
-highlighter: pygments                    # rouge is not available on GitHub, causes "Page build failure"
+highlighter: rouge
 paginate: 8
 paginate_path: "blog/page:num"
 permalink: /:categories/:year/:title.html
