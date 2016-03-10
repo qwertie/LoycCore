@@ -30,7 +30,7 @@ And this is a waste of time and memory in case the methods _do not_ modify the s
 Introducing Loyc.Collections's set types
 ----------------------------------------
 
-I wrote a different kind of engine for storing sets, something very friendly to a functional programming style. It's a "persistent data structure"](https://en.wikipedia.org/wiki/Persistent_data_structure), which doesn't necessarily mean what you think it means.
+I wrote a different kind of engine for storing sets, something very friendly to a functional programming style. It's a ["persistent data structure"](https://en.wikipedia.org/wiki/Persistent_data_structure), which doesn't necessarily mean what you think it means.
 
 First I will show you why these sets are easier to use, and then I will demonstrate how Loyc sets use memory more efficiently.
 
