@@ -11,7 +11,7 @@ There is one more `AList<T>` data structure that I created after writing the fir
 
 The `SparseAList<T>` is a list in which not all the indexes are "set". Unset (a.k.a. "clear") indexes are "virtual" and use no memory at all, and `sparseAList[i]` returns `default(T)` when `[i]` is clear. Meanwhile, indexes that _are_ set use 4 bytes extra. The `Count` property returns the total number of "virtual" items, set and unset alike. The internal nodes of `SparseAList<T>` are practically the same as a normal `AList<T>`, but the leaf nodes have a different structure:
 
-  ~~~csharp
+~~~csharp
 	public class SparseAListLeaf<T> : AListNode<int, T>
 	{
 		[DebuggerDisplay("Offset = {Offset}, Item = {Item}")]
@@ -24,7 +24,7 @@ The `SparseAList<T>` is a list in which not all the indexes are "set". Unset (a.
 		protected InternalDList<Entry> _list;
 		protected uint _totalCount;
 		...
-  ~~~
+~~~
 
 For example, after running this code:
 
@@ -49,7 +49,7 @@ From the outside it appears to be a list of 1000 items, but in reality there are
 
 This kind of list may resemble a `SortedDictionary<int,T>` but there is a big difference: you can _insert and remove_ ranges of indexes, which efficiently "shifts" the indexes of all items above the affected index. For example, if I add one million real items to a `SparseAList<T>`, I can do `list.InsertSpace(0, 1000)` and this will increase the index of all one million items by 1000 (in O(log N) time).
 
-`SparseAList<T>` implements my `ISparseListSource<T>` and `ISparseList<T>` interfaces. Compared to a normal list, a sparse list offers the following additional methods:
+`SparseAList<T>` implements my `ISparseListSource<T>` and `ISparseList<T>` interfaces. Compared to a normal list, a sparse list offers the following additional methods (or see [Doxygen's rendering](http://loyc.net/doc/code/interfaceLoyc_1_1Collections_1_1ISparseListSource_3_01T_01_4.html)):
 
 ~~~csharp
 	/// <summary>Represents a read-only indexed list in which parts of the index 
