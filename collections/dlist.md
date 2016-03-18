@@ -12,7 +12,7 @@ Creating the `AList<T>` data structures for my [list trifecta series](alists-par
 
 The standard `List<T>`, pictured here, is an object that contains a reference to an array (`T[]`) and a "size" variable that indicates how many of the items of the array are currently in use:
 
-![List<T> diagram](ListT-diagram.png)
+![`List<T>` diagram](ListT-diagram.png)
 
 The list also enlarges itself as you add items. The array starts at size 4, then enlarges to 8 when you add the fifth item, by creating a new array and copying the existing 4 items to the new array before adding the fifth.
 
@@ -26,15 +26,15 @@ The `D` in `DList` stands for "deque" or double-ended queue, since `DList` imple
 
 At first, items are added to the left side of the array, in the same way as for `List<T>`. Suppose you add five items to a `DList<T>`, and then you add two more (seven in total):
 
-![DList<T> diagram](DListT-diagram-1.png)
+![`DList<T>` diagram](DListT-diagram-1.png)
 
 If you then remove the first five items, the `_start` reference is advanced up to 5; there is no need to move any of the other items:
 
-![DList<T> diagram](DListT-diagram-2.png)
+![`DList<T>` diagram](DListT-diagram-2.png)
 
 If you add 3 additional items to the end, there is certainly enough room in an array of 8 for the 3 new items, but the new items must "wrap around" to the beginning of the array:
 
-![DList<T> diagram](DListT-diagram-3.png)
+![`DList<T>` diagram](DListT-diagram-3.png)
 
 From the outside, `DList<T>` appears to behave exactly like `List<T>`, but because `DList<T>` uses the so-called circular buffer concept, it is much faster in case you will be adding or removing items at the beginning, or near the beginning, of the list. Whenever you add or remove an item, `DList<T>` checks the distance from the beginning and end of the list and chooses the best insertion location. For example, if a `DList<T>` has 100,000 items and you insert something at index 40,000, the first 40,000 items will be moved left to make room for the new item, because it's slightly faster than the alternative of moving the last 60,000 items rightward.
 
