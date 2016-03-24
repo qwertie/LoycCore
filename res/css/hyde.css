@@ -78,7 +78,7 @@ html {
 .sidebar-about h1 {
   color: #fff;
   margin-top: 0;
-  font-family: 'Berkshire Swash', cursive;
+  font-family: "Berkshire Swash", cursive;
   font-size: 3.25rem;
 }
 
@@ -107,7 +107,7 @@ a.sidebar-nav-item:focus {
   .sidebar-sticky {
     position: absolute;
     right:  0.5rem;
-    bottom: 0.25rem;
+    bottom: 0.5rem;
     left:   1rem;
   }
 }

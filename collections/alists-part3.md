@@ -262,7 +262,7 @@ Notice that the `IEnumerator` of `AList` has a constant speed while the `[indexe
 
 I noticed something interesting about `List<T>`: access by `IEnumerator<T>` is up to 7 times slower than direct access by the indexer! For example, in the list with 100000 items, the `List<T>` indexer benchmark takes 14 ms, but the `List<T> IEnumerator` benchmark takes 92 ms. Why is this? I suspect it's because when you use LINQ (access through `IEnumerator<T>`), the traversal cannot be inlined by the JIT. If inlining occurs, it's naturally much faster because adding up a bunch of numbers is a very, very simple job for a computer. Also, if inlining occurs, it's possible that one of the two range checks required by List<T> can be eliminated (yeah, there are two. One is a range check against the `Count` of `List<T>`, the other is a check against the `Length` of the array inside the `List<T>`.)
 
-I noticed that `DList<T>` wasn't getting as much of a performance boost through the indexer so I tried `InternalDList<T>` instead, which gets better results (see my [DList article](http://core.loyc.net/collections/dlist.html).)
+I noticed that `DList<T>` wasn't getting as much of a performance boost through the indexer so I tried `InternalDList<T>` instead, which gets better results (see my [DList article](http://core.ecsharp.net/collections/dlist.html).)
 
 ### Dictionary benchmarks
 
@@ -283,7 +283,7 @@ Now let's see a graph without `SortedList` screwing up the Y axis:
 
 ![Results](bm-dictionary-random-add+remove-(no-SortedList).png)
 
-It should be noted that sorted dictionaries is normally slower than unsorted dictionaries. The standard `Dictionary<K,V>` and the `MMap<K,V>` class of [Loyc.Collections](http://core.loyc.net) are both unsorted, so they are faster than `BDictionary<K,V>` and the standard `SortedDictionary<K,V>` which are sorted.
+It should be noted that sorted dictionaries is normally slower than unsorted dictionaries. The standard `Dictionary<K,V>` and the `MMap<K,V>` class of [Loyc.Collections](http://core.ecsharp.net) are both unsorted, so they are faster than `BDictionary<K,V>` and the standard `SortedDictionary<K,V>` which are sorted.
 
 To my disappointment, `BDictionary<K,V>` is usually slower than `SortedDictionary<K,V>`. On the plus side, `BDictionary<K,V>` uses less memory than `SortedDictionary<K,V>` because it packs its items into arrays. In contrast, `SortedDictionary` is a red-black tree that allocates a separate heap object for every pair (node) in the dictionary. The overhead of this is 5 words per item, typically 40 bytes in a 64-bit process (that's two words for the object header, two words for references to the left and right children of each node, and one word for the "red" flag of the [red-black tree](http://en.wikipedia.org/wiki/Red%E2%80%93black_tree)). It should also be noted that `SortedDictionary<K,V>` can cause more stress on the garbage collector than `BDictionary<K,V>` because it contains so many references; I expect this only affects performance significantly in apps with large heaps.
 
@@ -291,4 +291,4 @@ Although its speed is merely O.K., `BDictionary<K,V>` is often a better choice t
 
 ## Download!
 
-I am happy to announce a new NuGet package called "LoycCore" which includes all the variants of `AList` as well as other data structures (including `DList`) and various other handy stuff, including most of the stuff I have published articles about in the past. I also created a [new web site for Loyc Core](http://core.loyc.net).
+I am happy to announce a new NuGet package called "LoycCore" which includes all the variants of `AList` as well as other data structures (including `DList`) and various other handy stuff, including most of the stuff I have published articles about in the past. I also created a [new web site for Loyc Core](http://core.ecsharp.net).

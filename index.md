@@ -5,7 +5,7 @@ title: Home
 Welcome
 =======
 
-The Loyc Core project is a set of general-purpose .NET libraries. LoycCore is especially focused on collections: classes, interfaces, adapters, and extension methods. 
+The Loyc .NET Core project is a set of general-purpose .NET libraries. LoycCore is especially focused on collections: classes, interfaces, adapters, and extension methods. 
 
 Contributors are welcome: more unit tests, code reviews, and new features are desired, anything relatively small (under about 3000 lines of code) that fits the theme "__things that should be built into the .NET framework, but aren't__".
 
