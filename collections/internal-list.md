@@ -138,7 +138,7 @@ Finally, alongside `InternalList<T>`, there is a `static class InternalList` tha
 
 The main purpose of `InternalList<T>` is to save memory, but occasionally you'll notice a speed difference. 
 
-I temporarily tweaked my list benchmarks from the [List Trifecta](http://core.ecsharp.net/collections/alists-part1.html) series. Generally `InternalList<T>` performs identically to `List<T>` except that this linear scan for-loop can read the list 55% faster (i.e. 34% less time).
+I temporarily tweaked my list benchmarks from the [List Trifecta](alists-part1.html) series. Generally `InternalList<T>` performs identically to `List<T>` except that this linear scan for-loop can read the list 55% faster (i.e. 34% less time).
 
 ~~~csharp
 long sum = 0;

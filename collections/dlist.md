@@ -75,7 +75,7 @@ replaces items 30, 40, 50, and 60 with -1.
 
 Leaf nodes of `AList`s contain a single `InternalDList<T>` structure. `DList<T>` itself also consists of a single `InternalDList<T>` structure (and nothing else).
 
-If you don't get what `InternalDList` is for, please read [my article on `InternalList`](http://core.ecsharp.net/collections/internal-list.html). `InternalList<T>` is the same concept, minus the "circular queue" part.
+If you don't get what `InternalDList` is for, please read [my article on `InternalList`](internal-list.html). `InternalList<T>` is the same concept, minus the "circular queue" part.
 
 ## Benchmarks
 
@@ -90,6 +90,6 @@ What this shows is that for lists with more than 1000 items, `DList<T>` does ran
 
 ## Download!
 
-I am happy to announce a new NuGet package called ["LoycCore"](https://www.nuget.org/packages/LoycCore/) which includes `DList`, `AList`, other data structures, and various other handy stuff, including most of the stuff I have published articles about in the past. I also created a [new web site for Loyc Core](http://core.ecsharp.net).
+I am happy to announce a new NuGet package called ["LoycCore"](https://www.nuget.org/packages/LoycCore/) which includes `DList`, `AList`, other data structures, and various other handy stuff, including most of the stuff I have published articles about in the past. I also created a [new web site for Loyc Core](http://core.loyc.net).
 
 `DList<T>` is part of `Loyc.Essentials.dll`. The [source code](https://github.com/qwertie/LoycCore/tree/master/Loyc.Essentials/Collections/Implementations) lives on GitHub. In principle `DList<T>` and `InternalDList<T>` can be extracted from this assembly, but it would take a little work, as they do depend on interfaces and other code in Loyc.Essentials.dll.

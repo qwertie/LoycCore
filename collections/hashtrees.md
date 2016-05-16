@@ -154,7 +154,7 @@ The bottom line:
 - They allow you to write APIs that clearly indicate whether or not they modify sets that are given to them: `MSet` and `MMap` can be modified, while `Set` and `Map` cannot.
 - They are optimized to avoid wasting memory, by sharing memory between similar sets.
 
-All the set and map types showcased here are part of Loyc.Collections.dll in the Loyc Core package, available on NuGet. Learn more at [core.ecsharp.net](http://core.ecsharp.net).
+All the set and map types showcased here are part of Loyc.Collections.dll in the Loyc Core package, available on NuGet. Learn more at [core.loyc.net](/).
 
 ---------------
 
