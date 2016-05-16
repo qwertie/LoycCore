@@ -6,6 +6,32 @@ layout: page
 LoycCore and LES
 ----------------
 
+### v1.7.6: 2016 ###
+
+- Add extension methods for `LNode`: `Without`, `WithoutAttr`
+
+### v1.7.5: April 29, 2016 ###
+
+- VLists: added `SmartSelectMany`; replaced dedicated `WhereSelect` with one based on `Transform`; deleted `Select<Out>`; renamed `Where` to `SmartWhere`. Replaced a few `Predicate<T>` with `Func<T, bool>` for consistency with LINQ-to-Objects
+
+### v1.7.4: April 18, 2016 ###
+
+- `IParsingService`: changed `inputType` parameters to use `ParsingMode`, a new extensible enumeration. Added additional modes.
+- Helper methods for parsing and printing tokens and hex digits have been moved from `Loyc.G` to `Loyc.Syntax.ParseHelpers`
+- Renamed `USlice(this string...)` to `Slice`
+- Removed `G.Pair` which was a duplicate of `Pair.Create`
+
+### v1.7.3: April 18, 2016 ###
+
+- Bug fix in MiniTest: some assert methods ignored user-defined message
+- Bug fix in `LastIndexWhere()` extension method
+
+### v1.7.2: April 1, 2016 ###
+
+- Extension methods: added `Slice(this NumRange)`, and non-allocating overloads of `IsOneOf()`
+- `LNode`: Added new `ReplaceRecursive` overload that can delete items.
+- `LNode` perf: All call nodes now cache their hashcode.
+
 ### v1.6.0: Mar 9, 2016 ###
 
 - Renamed `Range.Single` => `ListExt.Single`, `MathEx.InRange` => `Range.PutInRange`, `In.*` => `Range.*`, `Range.Excl` => `Range.ExcludeHi`, `Range.Incl` => `Range.Inclusive`
