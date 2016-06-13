@@ -83,7 +83,7 @@ namespace Loyc.Syntax.Les
 			p.Writer = w;
 			p.Errors = errors;
 
-			if (object.Equals(mode, NodeStyle.Expression) || mode == ParsingMode.Exprs)
+			if (object.Equals(mode, NodeStyle.Expression) || mode == ParsingMode.Expressions)
 				p.Print(node, 0, StartStmt, "");
 			else
 				p.Print(node, 0, StartStmt, ";");
@@ -376,20 +376,20 @@ namespace Loyc.Syntax.Les
 						_out.Write(GetRawText(attr), true);
 					} else if (!PrintExplicitTrivia) {
 						if (name == S.TriviaSpaceAfter && !OmitSpaceTrivia) {
-							PrintSpaces((attr.HasValue ? attr.Value ?? "" : "").ToString());
+							PrintSpaces(GetRawText(attr));
 							spaces = true;
 						} else if (name == S.TriviaSLCommentAfter && !OmitComments) {
 							if (!spaces)
 								_out.Space();
 							_out.Write("//", false);
-							_out.Write((attr.Value ?? "").ToString(), true);
+							_out.Write(GetRawText(attr), true);
 							_out.Newline(true);
 							spaces = true;
 						} else if (name == S.TriviaMLCommentAfter && !OmitComments) {
 							if (!spaces)
 								_out.Space();
 							_out.Write("/*", false);
-							_out.Write((attr.Value ?? "").ToString(), false);
+							_out.Write(GetRawText(attr), false);
 							_out.Write("*/", false);
 							spaces = false;
 						}
@@ -552,15 +552,15 @@ namespace Loyc.Syntax.Les
 				_out.Write(quoteType, false);
 				_out.Write(quoteType, false);
 			} else {
-				_out.Write(G.EscapeCStyle(text, EscapeC.Control, quoteType), false);
+				_out.Write(ParseHelpers.EscapeCStyle(text, EscapeC.Control, quoteType), false);
 			}
 			_out.Write(quoteType, true);
 		}
 
 		static Pair<RuntimeTypeHandle,Action<LesNodePrinter, object, NodeStyle>> P<T>(Action<LesNodePrinter, object, NodeStyle> handler) 
-			{ return G.Pair(typeof(T).TypeHandle, handler); }
+			{ return Pair.Create(typeof(T).TypeHandle, handler); }
 		static Pair<K,V> P<K,V>(K key, V value) 
-			{ return G.Pair(key, value); }
+			{ return Pair.Create(key, value); }
 		static Dictionary<K,V> Dictionary<K,V>(params Pair<K,V>[] input)
 		{
 			var d = new Dictionary<K,V>();

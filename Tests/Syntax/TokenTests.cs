@@ -60,7 +60,7 @@ namespace Loyc.Syntax.Lexing
 		}
 
 		static Pair<K, V> P<K, V>(K key, V value)
-			{ return G.Pair(key, value); }
+			{ return Pair.Create(key, value); }
 		private void TestToLNode(ISourceFile file, IList<Pair<Token, string>> pairs)
 		{
 			for (int i = 0; i < pairs.Count; i++)
@@ -69,7 +69,7 @@ namespace Loyc.Syntax.Lexing
 		private void TestToLNode(Token t, ISourceFile file, string lesString)
 		{
 			LNode n = t.ToLNode(file);
-			AreEqual(lesString, LesLanguageService.Value.Print(n, MessageSink.Current, ParsingMode.Exprs, "", ""));
+			AreEqual(lesString, LesLanguageService.Value.Print(n, MessageSink.Current, ParsingMode.Expressions, "", ""));
 			AreEqual(file, n.Source);
 			AreEqual(t.StartIndex, n.Range.StartIndex);
 			AreEqual((t.Children != null && t.Children.Count > 0 ? t.Children.Last : t).EndIndex, n.Range.EndIndex);

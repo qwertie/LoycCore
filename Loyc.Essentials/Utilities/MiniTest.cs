@@ -4,6 +4,7 @@ using Loyc.Math;
 using System.Collections;
 using Loyc.Threading;
 using System.Text;
+using Loyc.Syntax;
 
 namespace Loyc.MiniTest
 {
@@ -274,12 +275,13 @@ namespace Loyc.MiniTest
 
 			switch (reason)
 			{
-				case StopReason.Fail: throw new AssertionException(msg);
+				case StopReason.Fail:   throw new AssertionException(msg);
 				case StopReason.Ignore: throw new IgnoreException(msg);
 				case StopReason.Inconclusive: throw new InconclusiveException(msg);
 				case StopReason.Success: throw new SuccessException(msg);
 			}
-			throw new TestException(msg);
+			Console.Error.WriteLine(msg);
+			return;
 		}
 
 		/// <summary>Fails a test by invoking <see cref="StopTestHandler"/>.Value(), 
@@ -308,7 +310,7 @@ namespace Loyc.MiniTest
 		/// throws a SuccessException.</summary>
 		public static void Success(string format, params object[] args)
 		{
-			StopTestHandler.Value(StopReason.Inconclusive, format, args);
+			StopTestHandler.Value(StopReason.Success, format, args);
 		}
 
 		/// <summary>Short for Fail("").</summary>
@@ -402,7 +404,7 @@ namespace Loyc.MiniTest
 				
 				int TailLength = "-----------".Length;
 				var prefix = b.Left(b_i);
-				int i_adjusted = G.EscapeCStyle(prefix, EscapeC.Default, '"').Length;
+				int i_adjusted = ParseHelpers.EscapeCStyle(prefix, EscapeC.Control | EscapeC.DoubleQuotes, '"').Length;
 				msg.Append(' ', 2);
 				msg.Append('-', TailLength + i_adjusted);
 				msg.Append("^\n");
@@ -423,7 +425,7 @@ namespace Loyc.MiniTest
 					dif_i = maxw / 2; // "...middle..."
 				}
 			}
-			return "\"" + G.EscapeCStyle(s, EscapeC.Default, '"') + "\"";
+			return "\"" + ParseHelpers.EscapeCStyle(s, EscapeC.Default, '"') + "\"";
 		}
 		static string StringifyObject(object obj)
 		{

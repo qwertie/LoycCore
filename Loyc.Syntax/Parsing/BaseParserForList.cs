@@ -32,8 +32,11 @@ namespace Loyc.Syntax
 	/// <typeparam name="MatchType">A data type, usually int, that represents a 
 	/// token type (identifier, operator, etc.) and implements <see cref="IEquatable{T}"/>
 	/// so it can be compared for equality with other token types; this is also the 
-	/// type of the <see cref="ISimpleToken{Matchtype}.Type"/> property. <c>MatchType</c>
-	/// cannot be an enum because an enum does not implement <see cref="IEquatable{T}"/>.</typeparam>
+	/// type of the <see cref="ISimpleToken{Matchtype}.Type"/> property. Unfortunately,
+	/// <c>MatchType</c> cannot be an enum because, strangely, an enum does not 
+	/// implement <see cref="IEquatable{T}"/>. So if your token type is an enum, as
+	/// it usually is, set this to <c>int</c> and use <c>matchType: int</c> when you 
+	/// invoke LLLPG: <c>LLLPG(parser(matchType: int, laType: TokenEnum));</c>.</typeparam>
 	/// <typeparam name="List">Data type of the list that contains the tokens (one 
 	/// often uses IList{Token}, but one could use <see cref="Loyc.Collections.Impl.InternalList{T}"/> 
 	/// for potentially higher performance.)</typeparam>
@@ -46,7 +49,7 @@ namespace Loyc.Syntax
 		/// <param name="list">A list of tokens that the derived class will parse.</param>
 		/// <param name="eofToken">A token value to return when the input position 
 		/// reaches the end of the token list. Ideally <c>eofToken.StartIndex</c>
-		/// should contain the position of EOF, but the base class method
+		/// would contain the position of EOF, but the base class method
 		/// <see cref="BaseParser{Tok,MT}.LaIndexToCharIndex"/> does not trust this
 		/// value, and will ensure that the character index returned for EOF is at 
 		/// least as large as the character index of the last token in the file. 
@@ -56,7 +59,7 @@ namespace Loyc.Syntax
 		/// <param name="file">A source file object that will be returned by the 
 		/// <see cref="SourceFile"/> property. By default, this object is used to 
 		/// get the file name, line number and column number shown in parser errors. 
-		/// If you are using <see cref="BaseLexer"/> or <see cref="LexerSource"/>, 
+		/// If your lexer uses <see cref="BaseLexer"/> or <see cref="LexerSource"/>, 
 		/// you can get this object from the <see cref="BaseLexer{C}.SourceFile"/> 
 		/// property. The <see cref="SourceFile"/> property (in this class) will 
 		/// return this value. If this parameter is null, then by default, error 
@@ -184,6 +187,8 @@ namespace Loyc.Syntax
 	/// but you can also pass an <see cref="IEnumerable{Token}"/> or 
 	/// <see cref="IEnumerator{Token}"/> to the constructor and it will 
 	/// convert it to a list, lazily, using <see cref="BufferedSequence{T}"/>.
+	/// <para/>
+	/// Please see additional documentation in the base class.
 	/// </remarks>
 	public abstract class BaseParserForList<Token, MatchType> : BaseParserForList<Token, MatchType, IList<Token>>
 		where Token : ISimpleToken<MatchType>

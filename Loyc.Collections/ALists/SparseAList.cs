@@ -10,7 +10,7 @@ namespace Loyc.Collections
 {
 	/// <summary>A sparse A-List that implements <see cref="ISparseList{T}"/>.</summary>
 	/// <remarks>
-	/// An <a href="http://core.ecsharp.net/collections/alists-part3.html">article</a>
+	/// An <a href="http://core.loyc.net/collections/alists-part3.html">article</a>
 	/// about this class is available.
 	/// <para/>
 	/// The sparse A-List is implemented similarly to a normal A-List; the main 
@@ -237,10 +237,10 @@ namespace Loyc.Collections
 		public void ClearSpace(int index, int count = 1)
 		{
 			CheckParam.IsNotNegative("count", count);
-			//CheckParam.IsNotNegative("index", index); checked by DoSparseOperation
 			AutoThrow();
 			int end = checked(index + count);
 			if (end > Count) {
+				CheckParam.IsNotNegative("index", index); // this is also checked by DoSparseOperation
 				if (index >= Count) {
 					InsertSpace(Count, end - Count);
 					return;

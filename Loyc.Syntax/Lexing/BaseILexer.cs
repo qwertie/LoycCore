@@ -9,7 +9,8 @@ namespace Loyc.Syntax.Lexing
 	/// <summary>A version of <see cref="BaseLexer{CharSrc}"/> that implements 
 	/// <see cref="ILexer{Token}"/>. You should use this base class if you want to 
 	/// wrap your lexer in a postprocessor such as <see cref="IndentTokenGenerator"/> 
-	/// or <see cref="TokensToTree"/>.
+	/// or <see cref="TokensToTree"/>. It can also be used with the <see 
+	/// cref="LCExt.Buffered"/> extension method to help feed data to your parser.
 	/// </summary>
 	/// <remarks>
 	/// Important: the derived class must call <see cref="AfterNewline()"/> after
@@ -23,9 +24,9 @@ namespace Loyc.Syntax.Lexing
 	/// <see cref="AfterNewline()"/> for you. It is possible to have LLLPG treat 
 	/// this method as a rule, and tell LLLPG the meaning of the rule like this:
 	/// <code>
-	///	  extern token Newline @[ '\r' '\n'? | '\n' ];
+	///	  extern token Newline @{ '\r' '\n'? | '\n' };
 	///	  // BaseLexer also defines a Spaces() method, which behaves like this:
-	///	  extern token Spaces  @[ (' '|'\t')* ]; 
+	///	  extern token Spaces  @{ (' '|'\t')* }; 
 	///	</code>
 	/// The <c>extern</c> modifier tells LLLPG not to generate code for the
 	///	rule, but the rule must still have a body so that LLLPG can perform 

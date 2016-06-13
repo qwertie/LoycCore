@@ -11,25 +11,19 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("Loyc.Essentials")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("A library with the theme \"things that should be built into the .NET framework, but aren't\". "+
+	"Contains interfaces, extension methods, and small bits of functionality that are useful in virtually any software project. "+
+	"About half of Loyc.Essentials is devoted to collections: collection interfaces, collection adapters, collection extension methods and even a couple of collection implementations (most notably DList<T>). "+
+	"The other half includes a variety of things including math, geometry, Symbols, localization, \"message sinks\", a miniature NUnit and more.")]
 [assembly: AssemblyConfiguration("")]
-[assembly: AssemblyCompany("")]
+[assembly: AssemblyCompany("David Piepgrass")]
 [assembly: AssemblyProduct("Loyc.Essentials")]
-[assembly: AssemblyCopyright("")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
 // This sets the default COM visibility of types in the assembly to invisible.
 // If you need to expose a type to COM, use [ComVisible(true)] on that type.
 [assembly: ComVisible(false)]
-
-// The assembly version has following format :
-//
-// Major.Minor.Build.Revision
-//
-// You can specify all the values or you can use the default the Revision and 
-// Build Numbers by using the '*' as shown below:
-[assembly: AssemblyVersion("1.7.*")]
 
 [assembly: CLSCompliant(false)]
 

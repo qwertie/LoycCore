@@ -318,7 +318,6 @@ namespace Loyc
 		public static bool operator !=(UString x, UString y) { return !x.Equals(y); }
 		public static explicit operator string(UString s) { return s._str.Substring(s._start, s._count); }
 		public static implicit operator UString(string s) { return new UString(s); }
-		public static implicit operator UString(StringSlice s) { return new UString(s.InternalString, s.InternalStart, s.Count); }
 
 		/// <summary>Synonym for Slice()</summary>
 		public UString Substring(int start, int count)
@@ -558,6 +557,27 @@ namespace Loyc
 				return new Pair<UString, UString>(Substring(0, i.Value), Substring(i.Value + delimiter.Length));
 			else
 				return new Pair<UString, UString>(this, UString.Null);
+		}
+
+		public static StringBuilder Append(StringBuilder sb, UString s)
+		{
+			if (s._count == s._str.Length)
+				return sb.Append(s);
+			else {
+				sb.EnsureCapacity(sb.Length + s.Length);
+				for (int i = s._start; i < s._start + s._count; i++)
+					sb.Append(s[i]);
+				return sb;
+			}
+		}
+
+		public static UString operator+(UString a, UString b)
+		{
+			if (b.Count == 0)
+				return a;
+			if (a.Count == 0)
+				return b;
+			return Append(Append(new StringBuilder(a.Count + b.Count), a), b).ToString();
 		}
 	}
 }
