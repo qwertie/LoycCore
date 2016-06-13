@@ -6,6 +6,17 @@ layout: page
 LoycCore and LES
 ----------------
 
+### v1.8.1: June 13, 2016 ###
+
+- Bug fix in LES printer: `/*suffix comments*/` were printed incorrectly (with no content).
+
+Minor changes:
+
+- Loyc.Essentials: Changed illogical return value of `LCInterfaces.IndexOf()` to be nullable.
+- Deleted `G.Assert` in favor of `Contract.Assert()` compatibility method in .NET 3.5 builds
+- Bug fix: `IndentTokenGenerator` (and LES parser) crashed in case of empty input
+- Bug fix: implemented IReadOnlyCollection.Count
+
 ### v1.7.6: 2016 ###
 
 - Add extension methods for `LNode`: `Without`, `WithoutAttr`
