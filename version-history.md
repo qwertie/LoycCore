@@ -6,6 +6,33 @@ layout: page
 LoycCore and LES
 ----------------
 
+### v1.9.3: October 12, 2016 ###
+
+- Fixed a race condition in SymbolPool.Get (issue #43)
+- Added helper classes for preserving comments (`TriviaSaver`, `AbstractTriviaInjector`, `StandardTriviaInjector`)
+- Changed LESv3 syntax based on user feedback (printer not yet updated)
+
+### v1.9.2: September 3, 2016 ###
+
+- Introduced LESv3 parser, printer, unit tests and parsing service (`Les3LanguageService`), plus a pretty-printer (`Les3PrettyPrinter`) with colored HTML and console output.
+- Add `BigInteger` literals to LESv2 and LESv3 (Issue #42) via `z` suffix
+- Tweaked LESv2 and LESv3 precedence rules. Most code will be unaffected; as LES has few users, it seems better not to fork `LesPrecedence` and `LesPrecedenceMap` for v3.
+- `LNode`: changed definition of `HasSpecialName` due to LESv3 idea to use '.' to mark keyword-expressions.
+- `LNode:` added `PlusAttrBefore()`, `PlusAttrsBefore()`
+- `NodeStyle.DataType` is unused, so changed name to `Reserved` (for future use)
+- `ParseHelpers`: `EscapeCStyle`/`UnescapeCStyle`: added support for 5-digit and 6-digit unicode code points and changed APIs to be `UString`-centric.
+- Added `StringExt.AppendCodePoint`, `UString.Left`, `UString.Right`. Allow `UString -> Symbol` conversion. Fixed bugs in `StringExt.EliminateNamedArgs`. Eliminated bitwise-not-on-error behavior when `UString` decodes a code point, because the behavior wasn't wanted in LES parser.
+- Add `ParseHelpers.IntegerToString` and `ParseNumberFlag.SkipSingleQuotes`
+- Tweaked `NodeStyle` to have named values for common literal styles (hex, triple-quoted, etc.)
+- Bug fix in `MiniTest`: failure was ignored by overloads that took a string message
+
+### v1.9.0: July 26, 2016 ###
+
+- Names of operators in LES and EC# now start with an apostrophe (`'`)
+- Also, `suf` in operator names changed from being a prefix to a suffix
+- Renamed `CodeSymbols.*Set` to `CodeSymbols.*Assign`
+- Removed 'Python mode' from LES; tweaked the lexer
+
 ### v1.8.1: June 13, 2016 ###
 
 - Bug fix in LES printer: `/*suffix comments*/` were printed incorrectly (with no content).
@@ -15,7 +42,7 @@ Minor changes:
 - Loyc.Essentials: Changed illogical return value of `LCInterfaces.IndexOf()` to be nullable.
 - Deleted `G.Assert` in favor of `Contract.Assert()` compatibility method in .NET 3.5 builds
 - Bug fix: `IndentTokenGenerator` (and LES parser) crashed in case of empty input
-- Bug fix: implemented IReadOnlyCollection.Count
+- Bug fix in `LNode`: implemented `IReadOnlyCollection.Count`
 
 ### v1.7.6: 2016 ###
 
