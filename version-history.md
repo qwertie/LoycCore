@@ -6,11 +6,65 @@ layout: page
 LoycCore and LES
 ----------------
 
+### v2.1.0: December 3, 2016 ###
+
+- Eliminated `LNodePrinter` delegate, replacing it with `ILNodePrinter`. `LNodePrinter` now holds standard extension methods of `ILNodePrinter`.
+- `IParsingService` no longer includes a printing capability; language services implement `ILNodePrinter` separately.
+- Renamed `LesNodePrinter` to `Les2Printer`, `LesParser` to `Les2Parser`, and so on for `LesLexer` and LESv2 unit tests.
+- `LinqToCollections`: Added `TakeWhile()` and `SkipWhile()` extension methods for  IList`, `IListSource`, `INegListSource`.
+- Added extension method `INegListSource<T>.TryGet(index)`
+- Added one-param constructor to `MacroProcessor` and switched order of params to other constructor for harmony.
+
+### v2.0.0: November 23, 2016 ###
+
+- `IParsingService.Print` has changed as follows:
+    - Old: `string Print(LNode node, IMessageSink msgs, object mode, string indentString, string lineSeparator);`
+    - New: `string Print(LNode node, IMessageSink msgs, ParsingMode mode, ILNodePrinterOptions options);`
+- Introduced `ILNodePrinterOptions` interface and `LNodePrinterOptions` class. This interface is shared among all languages; each language also has its own options type with extra options. The options object eliminates the need for users to create printer objects, so the constructors of the LES/EC# printers have gone internal.
+- We now avoid using `SourcePos` for the context of `IMessageSink.Write()`; `SourceRange` is now used instead.
+- `IParsingService.Parse` now preserves comments by default, if possible.
+- `LNode.Equals` now has a `CompareMode` parameter which can be set to ignore trivia.
+- Bug fix: `InParens()` no longer creates trivia with a range covering the entire node (it confuses the trivia injector)
+- Bug fix: `IndexPositionMapper` unit tests were not set up to run, and it was broken
+- Eliminated `NodeStyle.Alternate2`; added `NodeStyle.InjectedTrivia` which is applied to trivia attributes by `AbstractTriviaInjector`.
+- `LesNodePrinter` now includes context when an unprintable literal is encountered.
+- Introduce generic base interfaces of `IMessageSink`.
+
+### v1.9.6: November 23, 2016 ###
+
+- Eliminated rarely-used optional arguments of some `LNode` creation methods.
+- `LinqToCollections`: Added `Select(this IList<T>, ...)` and `FirstOrDefault(this IList<T>, T)`.
+- Bug fix in `LNodeFactory` that messed up trivia injector for EC#
+
+### v1.9.5: November 14, 2016 ###
+
+- LESv2 and LESv3 can now preserve comments and newlines and round-trip them to their printers.
+- Added a few extension methods, most notably `StringBuilderExt`.
+- Introduced `ILNode` interface for objects that want to pretend to be Loyc trees. Added `LNode.Equals(ILNode, ILNode)`.
+- LES printers can now print `ILNode` objects directly, but most other functionality still requires `LNode` and this is not planned to change.
+- Changed the way trivia works (new `#trivia_trailing` attribute) and improved the way the LES2 printer prints trivia
+- Tweaked the way the trivia injector talks to its derived class.
+- `IParsingService`: Added overload `Print(IEnumerable<LNode>, ...)`.
+- `LNodeFactory`: Added `TriviaNewline`, `OnNewLine()`
+- `LNodeExt`: Added `GetTrivia()`
+- `EscapeC` & `EscapeCStyle`: Changed `EscapeC.Default`; added `UnicodeNonCharacters` and `UnicodePrivateUse` options. Single quotes are no longer escaped by default but non-characters and private characters are.
+- Eliminated `SelectNegLists` and `SelectNegListSources`, which most likely no one was using. Renamed `NegView` to `AsNegList` for consistency with `AsList` etc. Added methods to `LinqToCollections` for `INegListSource`.
+- Renamed `Front` to `First` and `Back` to `Last` in the `Range` interfaces.
+- Changed API of `Les3PrettyPrinter`
+- Updated LESv3 printer to support most of the recent changes to LESv3. Semicolons are no longer printed by default.
+- LESv3 now allows `\\` to end single-line comments, to make it easier for the printer to avoid newlines in illegal places.
+
+### v1.9.4: October 25, 2016 ###
+
+- `IParsingService`: added `CanPreserveComments` property and comment preservation flag when parsing
+- Improved trivia injector (`AbstractTriviaInjector`); added `NodeStyle.OneLiner`
+- Added `UString.EndsWith()`
+
 ### v1.9.3: October 12, 2016 ###
 
-- Fixed a race condition in SymbolPool.Get (issue #43)
+- Fixed a race condition in `SymbolPool.Get` (issue #43)
 - Added helper classes for preserving comments (`TriviaSaver`, `AbstractTriviaInjector`, `StandardTriviaInjector`)
-- Changed LESv3 syntax based on user feedback (printer not yet updated)
+- Changed syntax of LESv3, partly in response to the [survey results](https://goo.gl/forms/XYRV1NrxfOB4IHNu1): Newline is now a terminator; added `.keywords`; removed juxtaposition operator; added new kinds of infix operator based on identifiers (e.g. `x s> y`, `a if c else b`); colon is allowed as a final suffix on any expression. (printer not yet updated)
 
 ### v1.9.2: September 3, 2016 ###
 
