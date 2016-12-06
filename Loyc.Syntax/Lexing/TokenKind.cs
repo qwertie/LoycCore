@@ -68,7 +68,7 @@ namespace Loyc.Syntax.Lexing
 		AttrKeyword  = 0x0A00,
 		/// <summary>e.g. int, bool, double, void</summary>
 		TypeKeyword  = 0x0B00,
-		/// <summary>e.g. sizeof, struct</summary>
+		/// <summary>e.g. sizeof, struct. Does not include literal keywords (true, false, null)</summary>
 		OtherKeyword = 0x0C00,
 		/// <summary>For token types not covered by other token kinds.</summary>
 		Other        = 0x0F00,
@@ -83,5 +83,9 @@ namespace Loyc.Syntax.Lexing
 		LOther       = 0x1800, // other opener(s)
 		ROther       = 0x1900, // other closer(s)
 		KindMask     = 0x1F00,
+		/// <summary>Openers and closers all have this bit set.</summary>
+		BracketFlag = 0x1000,
+		/// <summary>Closers all have this bit set.</summary>
+		CloserFlag = 0x0100,
 	}
 }

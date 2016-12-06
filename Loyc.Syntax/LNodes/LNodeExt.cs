@@ -12,19 +12,118 @@ namespace Loyc.Syntax
 	/// <summary>Standard extension methods for <see cref="LNode"/>.</summary>
 	public static class LNodeExt
 	{
-		/// <summary>Interprets a node as a list by returning <c>block.Args</c> if 
-		/// <c>block.Calls(braces)</c>, otherwise returning a one-item list of nodes 
-		/// with <c>block</c> as the only item.</summary>
-		public static VList<LNode> AsList(this LNode block, Symbol braces)
+		#region Trivia management
+
+		public static VList<LNode> GetTrivia(this LNode node) { return GetTrivia(node.Attrs); }
+		public static VList<LNode> GetTrivia(this VList<LNode> attrs)
 		{
-			return block.Calls(braces) ? block.Args : new VList<LNode>(block);
+			var trivia = VList<LNode>.Empty;
+			foreach (var a in attrs)
+				if (a.IsTrivia)
+					trivia.Add(a);
+			return trivia;
+		}
+		/// <summary>Gets all trailing trivia attached to the specified node.</summary>
+		public static VList<LNode> GetTrailingTrivia(this LNode node) { return GetTrailingTrivia(node.Attrs); }
+		/// <summary>Gets all trailing trivia attached to the specified node.</summary>
+		/// <remarks>Trailing trivia is represented by a call to #trivia_trailing in
+		/// a node's attribute list; each argument to #trivia_trailing represents one
+		/// piece of trivia. If the attribute list has multiple calls to 
+		/// #trivia_trailing, this method combines those lists into a single list.</remarks>
+		public static VList<LNode> GetTrailingTrivia(this VList<LNode> attrs)
+		{
+			var trivia = VList<LNode>.Empty;
+			foreach (var a in attrs)
+				if (a.Calls(S.TriviaTrailing))
+					trivia.AddRange(a.Args);
+			return trivia;
+		}
+		/// <summary>Removes a node's trailing trivia and adds a new list of trailing trivia.</summary>
+		public static LNode WithTrailingTrivia(this LNode node, VList<LNode> trivia)
+		{
+			return node.WithAttrs(WithTrailingTrivia(node.Attrs, trivia));
+		}
+		/// <summary>Removes all existing trailing trivia from an attribute list and adds a new list of trailing trivia.</summary>
+		/// <remarks>This method has a side-effect of recreating the #trivia_trailing
+		/// node, if there is one, at the end of the attribute list. If <c>trivia</c>
+		/// is empty then all calls to #trivia_trailing are removed.</remarks>
+		public static VList<LNode> WithTrailingTrivia(this VList<LNode> attrs, VList<LNode> trivia)
+		{
+			var attrs2 = WithoutTrailingTrivia(attrs);
+			if (trivia.IsEmpty)
+				return attrs2;
+			return attrs2.Add(LNode.Call(S.TriviaTrailing, trivia));
+		}
+		/// <summary>Gets a new list with any #trivia_trailing attributes removed.</summary>
+		public static VList<LNode> WithoutTrailingTrivia(this VList<LNode> attrs)
+		{
+			return attrs.Transform((int i, ref LNode attr) => attr.Calls(S.TriviaTrailing) ? XfAction.Drop : XfAction.Keep);
+		}
+		/// <summary>Gets a new list with any #trivia_trailing attributes removed. Those trivia are returned in an `out` parameter.</summary>
+		public static VList<LNode> WithoutTrailingTrivia(this VList<LNode> attrs, out VList<LNode> trailingTrivia)
+		{
+			var trailingTrivia2 = VList<LNode>.Empty;
+			attrs = attrs.Transform((int i, ref LNode attr) => {
+				if (attr.Calls(S.TriviaTrailing)) {
+					trailingTrivia2.AddRange(attr.Args);
+					return XfAction.Drop;
+				}
+				return XfAction.Keep;
+			});
+			trailingTrivia = trailingTrivia2; // cannot use `out` parameter within lambda method
+			return attrs;
+		}
+		/// <summary>Adds additional trailing trivia to a node.</summary>
+		public static LNode PlusTrailingTrivia(this LNode node, VList<LNode> trivia)
+		{
+			return node.WithAttrs(PlusTrailingTrivia(node.Attrs, trivia));
+		}
+		/// <summary>Adds additional trailing trivia to a node.</summary>
+		public static LNode PlusTrailingTrivia(this LNode node, LNode trivia)
+		{
+			return node.WithAttrs(PlusTrailingTrivia(node.Attrs, trivia));
+		}
+		/// <summary>Adds additional trailing trivia to an attribute list. Has no effect if <c>trivia</c> is empty.</summary>
+		/// <remarks>
+		/// Trailing trivia is represented by a call to #trivia_trailing in a node's 
+		/// attribute list; each argument to #trivia_trailing represents one piece of 
+		/// trivia.
+		/// <para/>
+		/// In the current design, this method has a side-effect of recreating the #trivia_trailing
+		/// node at the end of the attribute list, and if there are multiple #trivia_trailing
+		/// lists, consolidating them into a single list, but only if the specified <c>trivia</c> 
+		/// list is not empty.</remarks>
+		public static VList<LNode> PlusTrailingTrivia(this VList<LNode> attrs, VList<LNode> trivia)
+		{
+			if (trivia.IsEmpty)
+				return attrs;
+			VList<LNode> oldTrivia;
+			attrs = WithoutTrailingTrivia(attrs, out oldTrivia);
+			return attrs.Add(LNode.Call(S.TriviaTrailing, oldTrivia.AddRange(trivia)));
+		}
+		/// <summary>Adds additional trailing trivia to an attribute list.</summary>
+		public static VList<LNode> PlusTrailingTrivia(this VList<LNode> attrs, LNode trivia)
+		{
+			VList<LNode> oldTrivia;
+			attrs = WithoutTrailingTrivia(attrs, out oldTrivia);
+			return attrs.Add(LNode.Call(S.TriviaTrailing, oldTrivia.Add(trivia)));
+		}
+
+		#endregion
+
+		/// <summary>Interprets a node as a list by returning <c>block.Args</c> if 
+		/// <c>block.Calls(listIdentifier)</c>, otherwise returning a one-item list 
+		/// of nodes with <c>block</c> as the only item.</summary>
+		public static VList<LNode> AsList(this LNode block, Symbol listIdentifier)
+		{
+			return block.Calls(listIdentifier) ? block.Args : new VList<LNode>(block);
 		}
 
 		/// <summary>Converts a list of LNodes to a single LNode by using the list 
 		/// as the argument list in a call to the specified identifier, or, if the 
 		/// list contains a single item, by returning that single item.</summary>
 		/// <param name="listIdentifier">Target of the node that is created if <c>list</c>
-		/// does not contain exactly one item. Typical values include "{}" and "#splice".</param>
+		/// does not contain exactly one item. Typical values include "'{}" and "#splice".</param>
 		/// <remarks>This is the reverse of the operation performed by <see cref="AsList(LNode,Symbol)"/>.</remarks>
 		public static LNode AsLNode(this VList<LNode> list, Symbol listIdentifier)
 		{
@@ -118,16 +217,12 @@ namespace Loyc.Syntax
 				}
 			return list;
 		}
-		public static LNode WithoutOuterParens(this LNode self)
-		{
-			return WithoutAttrNamed(self, S.TriviaInParens);
-		}
 
 		public static LNode ArgNamed(this LNode self, Symbol name)
 		{
 			return self.Args.NodeNamed(name);
 		}
-		public static int IndexWithName(this VList<LNode> self, Symbol name)
+		public static int IndexWithName(this VList<LNode> self, Symbol name, int resultIfNotFound = -1)
 		{
 			int i = 0;
 			foreach (LNode node in self)
@@ -135,7 +230,7 @@ namespace Loyc.Syntax
 					return i;
 				else
 					i++;
-			return -1;
+			return resultIfNotFound;
 		}
 		public static LNode NodeNamed(this VList<LNode> self, Symbol name)
 		{
@@ -144,6 +239,45 @@ namespace Loyc.Syntax
 					return node;
 			return null;
 		}
+
+		#region Parentheses management
+
+		public static bool IsParenthesizedExpr(this LNode node)
+		{
+			return node.AttrNamed(CodeSymbols.TriviaInParens) != null;
+		}
+
+		/// <summary>Returns the same node with a parentheses attribute added.</summary>
+		public static LNode InParens(this LNode node)
+		{
+			return node.PlusAttrBefore(LNode.Id(CodeSymbols.TriviaInParens));
+		}
+		/// <summary>Returns the same node with a parentheses attribute added.</summary>
+		/// <remarks>The node's range is changed to the provided <see cref="SourceRange"/>
+        /// and the original range of the node is assigned to the parentheses attribute.</remarks>
+		public static LNode InParens(this LNode node, SourceRange range)
+		{
+			return node.WithRange(range).PlusAttrBefore(LNode.Id(CodeSymbols.TriviaInParens));
+		}
+		/// <summary>Returns the same node with a parentheses attribute added.</summary>
+		public static LNode InParens(this LNode node, ISourceFile file, int startIndex, int endIndex)
+		{
+            return InParens(node, new SourceRange(file, startIndex, endIndex - startIndex));
+		}
+		/// <summary>Removes a single pair of parentheses, if the node has a 
+		/// #trivia_inParens attribute. Returns the same node when no parens are 
+		/// present.</summary>
+		public static LNode WithoutOuterParens(this LNode self)
+		{
+			LNode parens;
+			self = WithoutAttrNamed(self, S.TriviaInParens, out parens);
+			// Restore original node range
+			if (parens != null && self.Range.Contains(parens.Range))
+				return self.WithRange(parens.Range);
+			return self;
+		}
+
+		#endregion
 
 		#region MatchesPattern() and helper methods // Used by replace() macro
 
@@ -241,11 +375,17 @@ namespace Loyc.Syntax
 			} else // kind == Id
 				return true;
 		}
-		public static bool MatchesPattern(this LNode candidate, LNode pattern, out MMap<Symbol, LNode> captures)
+		public static bool MatchesPattern(this LNode candidate, LNode pattern, out IDictionary<Symbol, LNode> captures, out VList<LNode> unmatchedAttrs)
 		{
-			VList<LNode> unmatchedAttrs = VList<LNode>.Empty;
-			captures = null;
-			return MatchesPattern(candidate, pattern, ref captures, out unmatchedAttrs);
+			MMap<Symbol, LNode> captures2 = null;
+			var matched = MatchesPattern(candidate, pattern, ref captures2, out unmatchedAttrs);
+			captures = captures2;
+			return matched;
+		}
+		public static bool MatchesPattern(this LNode candidate, LNode pattern, out IDictionary<Symbol, LNode> captures)
+		{
+			VList<LNode> unmatchedAttrs;
+			return MatchesPattern(candidate, pattern, out captures, out unmatchedAttrs);
 		}
 
 		static void AddCapture(MMap<Symbol, LNode> captures, LNode cap, Slice_<LNode> items)
@@ -276,23 +416,31 @@ namespace Loyc.Syntax
 		static bool AttributesMatch(LNode candidate, LNode pattern, ref MMap<Symbol, LNode> captures, out VList<LNode> unmatchedAttrs)
 		{
 			if (pattern.HasPAttrs())
-				throw new NotImplementedException("TODO: attributes in patterns are not yet supported");
+				throw new LogException(pattern.Attrs.Last, "TODO: attributes in patterns are not yet supported");
 			unmatchedAttrs = candidate.Attrs;
 			return true;
 		}
-		static bool IsParamsCapture(LNode p)
+		static bool IsParamsCapture(LNode pattern)
 		{
-			return p.Calls(S.Substitute, 1) 
-				&& (p.Args.Last.AttrNamed(S.Params) != null || p.Args.Last.Calls(S.DotDot, 1))
-				&& GetCaptureIdentifier(p) != null;
+			if (pattern.Calls(S.Substitute, 1)) {
+				LNode arg = pattern.Args.Last;
+				return (arg.Calls(S.DotDot, 1) || arg.Calls(S.DotDotDot, 1) || arg.AttrNamed(S.Params) != null)
+					&& GetCaptureIdentifier(pattern) != null;
+			}
+			return false;
 		}
-		static LNode GetCaptureIdentifier(LNode pattern)
+		/// <summary>Checks if <c>pattern</c> matches one of the syntax trees 
+		/// <c>$x</c> or <c>$(..x)</c> or <c>$(...x)</c> for some identifier <c>x</c>.
+		/// These are conventionally used to represent partial syntax trees.</summary>
+		/// <returns>The matched identifier (<c>x</c> in the examples above), or null 
+		/// if <c>pattern</c> was not a match.</returns>
+		public static LNode GetCaptureIdentifier(LNode pattern, bool identifierRequired = true)
 		{
 			if (pattern.Calls(S.Substitute, 1)) {
 				var arg = pattern.Args.Last;
-				if (arg.Calls(S.DotDot, 1))
+				if (arg.Calls(S.DotDot, 1) || arg.Calls(S.DotDotDot, 1))
 					arg = arg.Args[0];
-				if (arg.IsId)
+				if (arg.IsId || !identifierRequired)
 					return arg;
 			}
 			return null;
@@ -356,6 +504,119 @@ namespace Loyc.Syntax
 		done_group:
 			AddCapture(captures, pArgs[saved_p], cArgs.Slice(saved_c, captureSize));
 			return true;
+		}
+
+		#endregion
+
+		#region ILNode extensions
+
+		public static bool IsCall(this ILNode node) { return node.Kind == LNodeKind.Call; }
+		public static bool IsId(this ILNode node) { return node.Kind == LNodeKind.Id; }
+		public static bool IsLiteral(this ILNode node) { return node.Kind == LNodeKind.Literal; }
+
+		public static int ArgCount(this ILNode node) { return node.Max + 1; }
+		public static int AttrCount(this ILNode node) { return -node.Min - 1; }
+
+		public static NegListSlice<ILNode> Attrs(this ILNode node)
+		{
+			int min = node.Min;
+			return new NegListSlice<ILNode>(node, min, -1 - min);
+		}
+		public static NegListSlice<ILNode> Args(this ILNode node)
+		{
+			return new NegListSlice<ILNode>(node, 0, System.Math.Max(node.Max + 1, 0));
+		}
+
+		public static bool IsTrivia(this ILNode node)
+		{
+			return CodeSymbols.IsTriviaSymbol(node.Name);
+		}
+
+		public static NodeStyle BaseStyle(this ILNode node) { return node.Style & NodeStyle.BaseStyleMask; }
+
+		public static bool IsIdNamed(this ILNode node, Symbol name) { return node.Name == name; }
+		public static bool IsIdNamed(this ILNode node, string name)
+		{
+			var nn = node.Name;
+			return nn == null ? name == null : nn.Name == name;
+		}
+
+		public static bool Calls(this ILNode node, Symbol name) { return node.CallsMin(name, 0); }
+
+		public static bool IsParenthesizedExpr(this ILNode node)
+		{
+			return node.Attrs().NodeNamed(CodeSymbols.TriviaInParens) != null;
+		}
+
+		public static bool HasSpecialName(this ILNode node) { return LNode.IsSpecialName(node.Name); }
+
+		public static bool HasAttrs(this ILNode node)
+		{
+			return node.Min < -1;
+		}
+		public static bool HasPAttrs(this ILNode node)
+		{
+			for (int i = node.Min; i < -1; i++)
+				if (!node[i].IsTrivia())
+					return true;
+			return false;
+		}
+
+		public static ILNode AttrNamed(this ILNode node, Symbol name)
+		{
+			return node.Attrs().NodeNamed(name);
+		}
+		public static ILNode NodeNamed(this NegListSlice<ILNode> self, Symbol name)
+		{
+			foreach (var node in self)
+				if (node.Name == name)
+					return node;
+			return null;
+		}
+		public static IListSource<ILNode> GetTrailingTrivia(this ILNode node)
+		{
+			if (node is LNode) {
+				VList<LNode> list = GetTrailingTrivia((LNode)node);
+				if (list.IsEmpty)
+					return EmptyList<ILNode>.Value; // avoid boxing in the common case
+				return list.UpCast<LNode, ILNode>();
+			} else {
+				VList<ILNode> list = VList<ILNode>.Empty;
+				foreach (ILNode a in node.Attrs()) {
+					if (a.Calls(S.TriviaTrailing))
+						list.AddRange(a.Args());
+				}
+				if (list.IsEmpty)
+					return EmptyList<ILNode>.Value; // avoid boxing in the common case
+				return list;
+			}
+		}
+
+		/// <summary>Converts <see cref="ILNode"/> to <see cref="LNode"/> recursively.
+		/// If the specified node is already an <see cref="LNode"/>, this method simply
+		/// does a cast.</summary>
+		public static LNode ToLNode(ILNode node)
+		{
+			return node is LNode ? (LNode)node : ToLNodeCore(node);
+		}
+		static LNode ToLNodeCore(ILNode node)
+		{
+			var attrs = VList<LNode>.Empty;
+			for (int i = node.Min; i < -1; i++)
+				attrs.Add(ToLNodeCore(node[i]));
+
+			switch (node.Kind) {
+				case LNodeKind.Id:
+					return LNode.Id(attrs, node.Name, node.Range, node.Style);
+				case LNodeKind.Literal:
+					return LNode.Literal(attrs, node.Value, node.Range, node.Style);
+				default:
+					var args = VList<LNode>.Empty;
+					for (int i = 0, max = node.Max; i <= max; i++)
+						args.Add(ToLNodeCore(node[i]));
+					var target = ToLNodeCore(node.Target);
+					return LNode.Call(attrs, target, args, node.Range, node.Style);
+			}
 		}
 
 		#endregion

@@ -29,51 +29,70 @@ namespace Loyc.Syntax
 		/// <summary>No style category is specified; the printer should choose a 
 		/// style automatically.</summary>
 		Default = 0,
-		/// <summary>The node should be printed with operator notation (infix, prefix, 
-		/// suffix) instead of prefix notation if applicable (can be used to request 
-		/// `backquote notation` in LES and EC#).</summary>
+		/// <summary>Indicates that a node was parsed as an operator (infix, prefix, 
+		/// suffix, or other operator), or that it should be printed with operator 
+		/// notation if possible.</summary>
 		Operator = 1,
 		/// <summary>The node's immediate children (and/or the node itself) should be 
 		/// printed in statement notation, if possible in the context in which it is 
 		/// located.</summary>
+		/// <remarks>Used to mark braced blocks. In LES, marks a call in which ';'
+		/// is used as the argument separator.</remarks>
 		Statement = 2,
 		/// <summary>A language-specific special notation should be used for this
-		/// node. In LES, this marker requests that the arguments to a call be
-		/// broken out into separate expressions, forming a "superexpression", e.g.
-		/// in "if c {a();} else {b();}", which actually means "if(c,{a();},else,{b();})",
-		/// the "if(...)" node will have this style.</summary>
+		/// node. In LESv3, the parser puts this style on block call nodes (e.g. 
+		/// <c>if (...) {...}</c>) and on keyword expressions (e.g. <c>#if x {...}</c>).</summary>
 		Special = 3,
-		/// <summary>The node should be printed in prefix notation, e.g. <c>@.(X, Y)</c>
-		/// instead of <c>X.Y</c>.</summary>
+		/// <summary>The node should be printed in prefix notation (even if it is 
+		/// not the natural notation to use). An example in EC# notation is 
+		/// <c>@`'+`(X, Y)</c> instead of <c>X + Y</c>.</summary>
 		PrefixNotation = 4,
 		/// <summary>The node(s) should be printed as a normal expression, rather
 		/// than using a special or statement notation.</summary>
+		/// <remarks>In EC#, braced initializer blocks have this style. The EC# 
+		/// node printer will refuse to print a node with this style as a statement.</remarks>
 		Expression = 5,
-		/// <summary>The node should be printed like a data type, if the type 
-		/// notation is somehow different from expression notation. (Note: in 
-		/// general, one cannot expect data types to have this style).</summary>
-		DataType = 6,
+		/// <summary>Unassigned.</summary>
+		Reserved = 6,
 		/// <summary>Use an older or backward-compatible notation.</summary>
+		/// <remarks>In EC#: prints lambda as delegate; forces old cast notation in EC#.</remarks>
 		OldStyle = 7,
 		/// <summary>If s is a NodeStyle, (s &amp; NodeStyle.BaseStyleMask) is the 
-		/// base style (Default, Expression, Statement, PrefixNotation, or PurePrefixNotation).</summary>
+		/// base style (Default, Operator, Statement, Special, PrefixNotation, Expression or OldStyle).</summary>
 		BaseStyleMask = 7,
 
-		/// <summary>If this node has two common styles in which it is printed, this
-		/// selects the second (either the less common style, or the EC# style for
-		/// features of C# with new syntax in EC#). In LES and EC#, alternate style
-		/// denotes hex numbers. In EC#, it denotes verbatim strings, x(->int) as 
-		/// opposed to (int)x, x (as Y) as opposed to (x as Y). delegate(X) {Y;} is 
-		/// considered to be the alternate style for X => Y, and it forces parens 
-		/// and braces as a side-effect.</summary>
-		Alternate = 8,
-		/// <summary>Another alternate style flag. In LES and EC#, this is used for
-		/// binary-format numbers.</summary>
-		Alternate2 = 16,
+		/// <summary>Used for a binary (base-2) literal like 0b11111.</summary>
+		BinaryLiteral = 5,
+		/// <summary>Used for a hexadecimal (base-16) literal like 0x1F.</summary>
+		HexLiteral = 6,
+		/// <summary>Used for an octal (base-7) literal like 0o37.</summary>
+		OctalLiteral = 7,
+		/// <summary>Used for an EC# verbatim string literal like <c>@"foo"</c>.</summary>
+		VerbatimStringLiteral = 5,
+		/// <summary>Used for a triple-quoted string literal like <c>'''foo'''</c>.</summary>
+		TQStringLiteral = 6,
+		/// <summary>Used for a triple-double-quoted string literal like <c>"""foo"""</c>.</summary>
+		TDQStringLiteral = 7,
+
+		/// <summary>If this node has two styles in which it can be printed, this
+		/// selects the second (the less common style, or less-well-supported style).
+		/// In EC#, it denotes x(->int) as opposed to (int)x, and x (as Y) as opposed 
+		/// to (x as Y). In C#, delegate(X) {Y;} is considered to be the alternate 
+		/// style for X => Y; it forces parens and braces as a side-effect.</summary>
+		Alternate = 16,
 		
+		/// <summary>Injected trivia (see <see cref="AbstractTriviaInjector{Trivia}"/>) 
+		/// will have this bit set.</summary>
+		InjectedTrivia = 32,
+
+		/// <summary>Indicates that the there is no comment or newline trivia associated
+		/// with the children of this node, and therefore when printing this node,
+		/// automatic newlines can be suppressed.</summary>
+		OneLiner = 64,
+
 		/// <summary>Indicates that some part of a compiler has seen the node and 
 		/// done something with it.</summary>
-		/// <remarks>The idea behind this flag relates to compilers that allow 
+		/// <remarks>The motivation for this flag relates to compilers that allow 
 		/// user-defined attributes for plug-ins that add functionality. For 
 		/// example, internationalization plug-in might notice a language marker:
 		/// <code>
@@ -81,9 +100,9 @@ namespace Loyc.Syntax
 		/// </code>
 		/// If an attribute is not used by any plug-in, the compiler should print 
 		/// a warning that the attribute is unused. This leads to the question, how
-		/// can a compiler tell if an attribute was used or not? The Handled flag
+		/// can a compiler tell if an attribute was ever used? The Handled flag
 		/// is one possible mechanism; when any part of the compiler or its plug-
-		/// ins use an attribute, the Handled flag should be set to disable the
+		/// ins use an attribute, the Handled flag could be set to disable the
 		/// compiler warning.
 		/// <para/>
 		/// Remember that the same node can theoretically appear in multiple

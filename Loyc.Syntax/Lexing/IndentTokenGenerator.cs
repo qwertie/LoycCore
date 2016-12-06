@@ -93,7 +93,7 @@ namespace Loyc.Syntax.Lexing
 		/// <param name="tokenAfterNewline">The first non-whitespace un-indented 
 		/// token after the unindent, or NoValue at the end of the file. The 
 		/// derived class is allowed to change this token, or delete it by 
-		/// changing it to NoValue (<see cref="LesIndentTokenGenerator"/> does this).</param>
+		/// changing it to NoValue.</param>
 		/// <remarks>This class considers the indented block to be "over" even if 
 		/// this method returns no tokens.</remarks>
 		protected abstract IEnumerator<Token> MakeDedentToken(Token tokenBeforeNewline, ref Maybe<Token> tokenAfterNewline);
@@ -128,7 +128,7 @@ namespace Loyc.Syntax.Lexing
 		/// </remarks>
 		protected virtual bool IndentChangedUnexpectedly(Token tokenBeforeNewline, ref Maybe<Token> tokenAfterNewline, ref int deltaIndent)
 		{
-			var pos = IndexToLine(tokenAfterNewline.Or(default(Token)));
+			var pos = IndexToMsgContext(tokenAfterNewline.Or(default(Token)));
 			if (deltaIndent > 0) {
 				if (_errorBias >= 0)
 					ErrorSink.Write(Severity.Error, pos, "Unexpected indent");
@@ -144,12 +144,15 @@ namespace Loyc.Syntax.Lexing
 			}
 			return true;
 		}
-		protected virtual SourcePos IndexToLine(Token token)
+
+		/// <summary>Gets the context for use in error messages, which by convention is a <see cref="SourceRange"/>.</summary>
+		/// <remarks>The base class uses Lexer.InputPosition as a fallback if the token doesn't implement ISimpleToken{int}.</remarks>
+		protected virtual object IndexToMsgContext(Token token)
 		{
 			int index = Lexer.InputPosition;
 			if (token is ISimpleToken<int>)
 				index = (token as ISimpleToken<int>).StartIndex;
-			return IndexToLine(index);
+			return new SourceRange(Lexer.SourceFile, index);
 		}
 
 		protected virtual void CheckForIndentStyleMismatch(UString indent1, UString indent2, Token next)
@@ -158,9 +161,9 @@ namespace Loyc.Syntax.Lexing
 			indent1 = indent1.Substring(0, common);
 			indent2 = indent2.Substring(0, common);
 			if (!indent1.Equals(indent2))
-				ErrorSink.Write(Severity.Warning, IndexToLine(next), "Indentation style changed on this line from {0} to {1}",
-					LesNodePrinter.PrintLiteral(indent1.ToString()), 
-					LesNodePrinter.PrintLiteral(indent2.ToString()));
+				ErrorSink.Write(Severity.Warning, IndexToMsgContext(next), "Indentation style changed on this line from {0} to {1}",
+					Les2Printer.PrintLiteral(indent1.ToString()), 
+					Les2Printer.PrintLiteral(indent2.ToString()));
 		}
 
 		public override void Reset() { 
@@ -490,11 +493,6 @@ namespace Loyc.Syntax.Lexing
 	/// statement (i.e. illegal in a non-block statement context). Since a semicolon
 	/// is not treated the same way as a newline, the <see cref="EolToken"/> should 
 	/// be a special token, not a semicolon.
-	/// 
-	/// <h3>Configuration for LES</h3>
-	/// 
-	/// For more information about LES's indent processing, see
-	/// <see cref="LesIndentTokenGenerator"/> .
 	/// </remarks>
 	/// <seealso cref="IndentTokenGenerator{Token}"/>
 	public class IndentTokenGenerator : IndentTokenGenerator<Token>

@@ -223,8 +223,6 @@ namespace Loyc.MiniTest
 	/// the most common assertions used in NUnit.
 	/// </summary>
 	/// <remarks>
-	/// WORK IN PROGRESS. TEST RUNNER IS NOT FINISHED YET.
-	/// <para/>
 	/// This class is mostly a drop-in replacement for "old-style" NUnit tests, 
 	/// i.e. those that do not use constraint classes or the "Is" class.
 	/// <para/>
@@ -280,8 +278,7 @@ namespace Loyc.MiniTest
 				case StopReason.Inconclusive: throw new InconclusiveException(msg);
 				case StopReason.Success: throw new SuccessException(msg);
 			}
-			Console.Error.WriteLine(msg);
-			return;
+			Console.Error.WriteLine(msg); // unreachable without debugger
 		}
 
 		/// <summary>Fails a test by invoking <see cref="StopTestHandler"/>.Value(), 
@@ -362,6 +359,7 @@ namespace Loyc.MiniTest
 					} catch {
 						ex.Data["Failed Assertion"] = stdMsg;
 					}
+					throw;
 				}
 			} else
 				Fail(stdMsg, stdArgs);
@@ -404,7 +402,7 @@ namespace Loyc.MiniTest
 				
 				int TailLength = "-----------".Length;
 				var prefix = b.Left(b_i);
-				int i_adjusted = ParseHelpers.EscapeCStyle(prefix, EscapeC.Control | EscapeC.DoubleQuotes, '"').Length;
+				int i_adjusted = ParseHelpers.EscapeCStyle(prefix, EscapeC.Default, '"').Length;
 				msg.Append(' ', 2);
 				msg.Append('-', TailLength + i_adjusted);
 				msg.Append("^\n");

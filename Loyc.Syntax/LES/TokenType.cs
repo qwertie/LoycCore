@@ -18,18 +18,18 @@ namespace Loyc.Syntax.Les
 		MLComment  = TokenKind.Comment + 1,
 		Shebang    = TokenKind.Comment + 2,
 		Id         = TokenKind.Id,
+		BQId         = TokenKind.Id + 1, // LESv3 only
 		Literal    = TokenKind.Literal, // true, false, null, @@sym, "string", 12345
+		NegativeLiteral = TokenKind.Literal + 1, // -12345
 		Dot        = TokenKind.Dot,
 		Assignment = TokenKind.Assignment,
 		NormalOp   = TokenKind.Operator,
 		PreOrSufOp = TokenKind.Operator + 1,  // ++, --
-		//SuffixOp   = TokenKind.Operator + 2,  // \\... (suffix only)
-		PrefixOp   = TokenKind.Operator + 3,  // $ (prefix only)
-		Colon      = TokenKind.Operator + 4,
+		PrefixOp   = TokenKind.Operator + 2,  // $ (prefix only)
 		At         = TokenKind.Operator + 5,
 		Not        = TokenKind.Operator + 6, // !, special because it's used for #of: A!(B,C) => #of(A, B, C)
-		BQString   = TokenKind.Operator + 7,
-		Backslash  = TokenKind.Operator + 8,
+		BQOperator = TokenKind.Operator + 7, // No longer used in LESv3; `foo` is redefined as an identifier
+		Colon      = TokenKind.Operator + 8, // LESv3 only, where : is a special line suffix
 		Comma      = TokenKind.Separator,
 		Semicolon  = TokenKind.Separator + 1,
 		LParen     = TokenKind.LParen,
@@ -38,9 +38,8 @@ namespace Loyc.Syntax.Les
 		LBrack     = TokenKind.LBrack,
 		RBrack     = TokenKind.RBrack,
 		LBrace     = TokenKind.LBrace,
+		LTokenLiteral = TokenKind.LBrace + 1, // '{
 		RBrace     = TokenKind.RBrace,
-		Indent     = TokenKind.LBrace + 1,
-		Dedent     = TokenKind.RBrace + 1,
 		Unknown    = TokenKind.Other,
 	}
 
@@ -60,7 +59,7 @@ namespace Loyc.Syntax.Les
 		/// For performance reasons, a <see cref="Token"/> does not have a reference 
 		/// to its source file, so this method cannot return the original string.
 		/// <para/>
-		/// The results are undefined if the token was not produced by <see cref="LesLexer"/>.
+		/// The results are undefined if the token was not produced by <see cref="Les2Lexer"/>.
 		/// </remarks>
 		public static string ToString(Token t)
 		{
@@ -70,11 +69,11 @@ namespace Loyc.Syntax.Les
 				case TT.SLComment: return "//\n";
 				case TT.MLComment: return "/**/";
 				case TT.Literal:
-					return LesNodePrinter.PrintLiteral(t.Value, t.Style);
-				case TT.BQString: 
-					return LesNodePrinter.PrintString((t.Value ?? "").ToString(), '`', false);
+					return Les2Printer.PrintLiteral(t.Value, t.Style);
+				case TT.BQOperator: 
+					return Les2Printer.PrintString((t.Value ?? "").ToString(), '`', false);
 				case TT.Id: 
-					return LesNodePrinter.PrintId(t.Value as Symbol ?? GSymbol.Empty);
+					return Les2Printer.PrintId(t.Value as Symbol ?? GSymbol.Empty);
 				case TT.LParen: return "(";
 				case TT.RParen: return ")";
 				case TT.LBrack: return "[";
@@ -89,17 +88,12 @@ namespace Loyc.Syntax.Les
 				case TT.PreOrSufOp:
 				case TT.PrefixOp:
 				//case TT.SuffixOp:
-				case TT.Colon:
 				case TT.At:
 				case TT.Comma:
 				case TT.Semicolon:
 				case TT.Not:
 					var name = (t.Value ?? "(punc missing value)").ToString();
 					return name;
-				case TT.Indent:
-					return "@indent";
-				case TT.Dedent:
-					return "@dedent";
 				default:
 					return "@unknown_token";
 			}

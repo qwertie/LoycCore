@@ -26,10 +26,10 @@ namespace Loyc.Syntax.Lexing
 		{
 			var file = EmptySourceFile.Unknown;
 			TestToLNode(EmptySourceFile.Unknown, new List<Pair<Token, string>>() {
-				P(new Token((int)TokenKind.Dot,          5, 11, 0, CodeSymbols.ColonColon), @"Dot(@@::)"),
-				P(new Token((int)TokenKind.Assignment,   5, 11, 0, CodeSymbols.AddSet),  @"Assignment(@@+=)"),
-				P(new Token((int)TokenKind.Operator,     5, 11, 0, CodeSymbols.Mul),     @"Operator(@@*)"),
-				P(new Token((int)TokenKind.Separator,    5, 11, 0, CodeSymbols.Comma),   @"Separator(@@`,`)"),
+				P(new Token((int)TokenKind.Dot,          5, 11, 0, CodeSymbols.ColonColon), @"Dot(@@'::)"),
+				P(new Token((int)TokenKind.Assignment,   5, 11, 0, CodeSymbols.AddAssign),  @"Assignment(@@'+=)"),
+				P(new Token((int)TokenKind.Operator,     5, 11, 0, CodeSymbols.Mul),     @"Operator(@@'*)"),
+				P(new Token((int)TokenKind.Separator,    5, 11, 0, CodeSymbols.Comma),   @"Separator(@@`',`)"),
 				P(new Token((int)TokenKind.AttrKeyword,  5, 11, 0, CodeSymbols.Public),  @"AttrKeyword(@@#public)"),
 				P(new Token((int)TokenKind.TypeKeyword,  5, 11, 0, CodeSymbols.Int32),   @"TypeKeyword(@@#int32)"),
 				P(new Token((int)TokenKind.OtherKeyword, 5, 11, 0, CodeSymbols.While),   @"OtherKeyword(@@#while)"),
@@ -69,7 +69,7 @@ namespace Loyc.Syntax.Lexing
 		private void TestToLNode(Token t, ISourceFile file, string lesString)
 		{
 			LNode n = t.ToLNode(file);
-			AreEqual(lesString, LesLanguageService.Value.Print(n, MessageSink.Current, ParsingMode.Expressions, "", ""));
+			AreEqual(lesString, Les2LanguageService.Value.Print(n, null, ParsingMode.Expressions));
 			AreEqual(file, n.Source);
 			AreEqual(t.StartIndex, n.Range.StartIndex);
 			AreEqual((t.Children != null && t.Children.Count > 0 ? t.Children.Last : t).EndIndex, n.Range.EndIndex);

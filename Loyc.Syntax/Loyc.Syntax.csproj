@@ -132,6 +132,7 @@
     <Reference Include="System.Core" />
     <Reference Include="System.Data" />
     <Reference Include="System.Data.DataSetExtensions" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq" />
   </ItemGroup>
@@ -140,39 +141,63 @@
       <HintPath>..\Lib\DotNet35\Theraot.Core.dll</HintPath>
     </Reference>
   </ItemGroup>
+  <ItemGroup Condition="'$(TargetFrameworkVersion)'=='v4.0'">
+    <Reference Include="System.Numerics" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFrameworkVersion)'=='v4.5'">
+    <Reference Include="System.Numerics" />
+  </ItemGroup>
   <ItemGroup>
     <Compile Include="..\AssemblyVersion.cs">
       <Link>Properties\AssemblyVersion.cs</Link>
     </Compile>
-    <Compile Include="LES\LesIndentTokenGenerator.cs" />
-    <Compile Include="LES\LesLexerGrammar.out.cs">
+    <Compile Include="LES\Les3LanguageService.cs" />
+    <Compile Include="LES\Les3Lexer.out.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>LesLexerGrammar.les</DependentUpon>
+      <DependentUpon>Les3Lexer.ecs</DependentUpon>
     </Compile>
+    <Compile Include="LES\Les3Parser.out.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Les3Parser.ecs</DependentUpon>
+    </Compile>
+    <Compile Include="LES\Les3PrettyPrinter.cs" />
+    <Compile Include="LES\Les3Printer.cs" />
+    <Compile Include="LES\Les2LexerGrammar.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Les2LexerGrammar.les</DependentUpon>
+    </Compile>
+    <Compile Include="LES\Les2ParserGrammar.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Les2ParserGrammar.les</DependentUpon>
+    </Compile>
+    <Compile Include="LES\Les3.cs" />
+    <Compile Include="LES\SpecialLiteral.cs" />
     <Compile Include="Lexing\BaseILexer.cs" />
+    <Compile Include="Lexing\TriviaSaver.cs" />
     <Compile Include="Lexing\IndentTokenGenerator.cs" />
     <Compile Include="Lexing\WhitespaceFilter.cs" />
     <Compile Include="LeMP\IMacroContext.cs" />
     <Compile Include="LeMP\MacroAttributes.cs" />
+    <Compile Include="LNodes\ILNode.cs" />
+    <Compile Include="LNodes\ILNodePrinter.cs" />
+    <Compile Include="LNodes\ILNodePrintingOptions.cs" />
+    <Compile Include="LNodes\ParsingMode.cs" />
     <Compile Include="Parsing\BaseParser.cs" />
     <Compile Include="Parsing\BaseParserForList.cs" />
     <Compile Include="Parsing\BaseParserNoBacktracking.cs" />
     <Compile Include="CodeSymbols.cs" />
     <Compile Include="IParsingService.cs" />
-    <Compile Include="LES\LesLanguageService.cs" />
-    <Compile Include="LES\LesLexer.cs" />
-    <Compile Include="LES\LesNodePrinter.cs" />
+    <Compile Include="LES\Les2LanguageService.cs" />
+    <Compile Include="LES\Les2Lexer.cs" />
+    <Compile Include="LES\Les2Printer.cs" />
     <Compile Include="LES\INodePrinterWriter.cs" />
-    <Compile Include="LES\LesNodePrinterWriter.cs" />
-    <Compile Include="LES\LesParser.cs">
+    <Compile Include="LES\Les2PrinterWriter.cs" />
+    <Compile Include="LES\Les2Parser.cs">
       <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="LES\LesParserGrammar.cs">
-      <DependentUpon>LesParserGrammar.les</DependentUpon>
-      <SubType>Code</SubType>
-      <DesignTime>True</DesignTime>
-      <AutoGen>True</AutoGen>
     </Compile>
     <Compile Include="LES\LesPrecedence.cs" />
     <Compile Include="LES\LesPrecedenceMap.cs" />
@@ -193,9 +218,12 @@
     <Compile Include="LNodes\LNodeVisitor.cs" />
     <Compile Include="LNodes\NodeStyle.cs" />
     <Compile Include="LNodes\StdNodes.cs" />
-    <Compile Include="OperatorShape.cs" />
+    <Compile Include="Parsing\OperatorShape.cs" />
+    <Compile Include="Parsing\StandardTriviaInjector.cs" />
+    <Compile Include="Parsing\AbstractTriviaInjector.cs" />
     <Compile Include="Parsing\ParserSource.cs" />
     <Compile Include="Parsing\Precedence.cs" />
+    <Compile Include="PrinterState.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SourceFiles\EmptySourceFile.cs" />
     <Compile Include="SourceFiles\IIndexPositionMapper.cs" />
@@ -249,14 +277,22 @@
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>
-    <None Include="LES\LesLexerGrammar.les">
-      <Generator>LLLPG</Generator>
-      <LastGenOutput>LesLexerGrammar.out.cs</LastGenOutput>
+    <None Include="LES\Les3Lexer.ecs">
+      <Generator>LeMP</Generator>
+      <LastGenOutput>Les3Lexer.out.cs</LastGenOutput>
     </None>
-    <None Include="LES\LesParserGrammar.les">
+    <None Include="LES\Les2LexerGrammar.les">
       <Generator>LLLPG</Generator>
-      <LastGenOutput>LesParserGrammar.cs</LastGenOutput>
+      <LastGenOutput>Les2LexerGrammar.cs</LastGenOutput>
+    </None>
+    <None Include="LES\Les2ParserGrammar.les">
+      <Generator>LLLPG</Generator>
       <CustomToolNamespace>--timeout=0</CustomToolNamespace>
+      <LastGenOutput>Les2ParserGrammar.cs</LastGenOutput>
+    </None>
+    <None Include="LES\Les3Parser.ecs">
+      <Generator>LeMP</Generator>
+      <LastGenOutput>Les3Parser.out.cs</LastGenOutput>
     </None>
     <None Include="OpenSourceKey.snk" />
   </ItemGroup>

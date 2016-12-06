@@ -88,9 +88,11 @@ namespace Loyc.LLParserGenerator
 			PrintAndParse(empty, "()");
 			empty.IsCharSet = true;
 			PrintAndParse(empty, "[]");
+			empty.IsCharSet = false; // design flaw here - mutable property on readonly static field 
 			PrintAndParse(all, "~()");
 			all.IsCharSet = true;
 			PrintAndParse(all, "[^]");
+			all.IsCharSet = false; // design flaw here - mutable property on readonly static field 
 
 			AreEqual(IntSet.WithCharRanges('a', 'd'), IntSet.Parse("[dacb]"));
 			AreEqual(IntSet.With(1234), IntSet.Parse("(1234)"));
@@ -116,7 +118,7 @@ namespace Loyc.LLParserGenerator
 		{
 			string s = set.ToString();
 			AreEqual(expect, s);
-			AreEqual(set, IntSet.Parse(expect));
+			AreEqual(IntSet.Parse(expect), set);
 		}
 
 		[Test]

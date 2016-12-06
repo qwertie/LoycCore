@@ -32,20 +32,6 @@ namespace Loyc.Syntax
 
 		public abstract override LNode Clone();
 		public abstract override LNode WithAttrs(VList<LNode> attrs);
-		public override bool Equals(LNode b, bool compareStyles)
-		{
-			if (b == null)
-				return false;
-			var kind = Kind;
-			if (kind != b.Kind)
-				return false;
-			if (compareStyles && Style != b.Style)
-				return false;
-			if (!Equals(Attrs, b.Attrs))
-				return false;
-			Debug.Assert(ArgCount == 0 && b.ArgCount == 0);
-			return Name == b.Name;
-		}
 		protected internal override int GetHashCode(int recurse, int styleMask)
 		{
 			int hash = Name.GetHashCode();
@@ -81,20 +67,6 @@ namespace Loyc.Syntax
 
 		public abstract override LNode Clone();
 		public abstract override LNode WithAttrs(VList<LNode> attrs);
-		public override bool Equals(LNode b, bool compareStyles)
-		{
-			if (b == null)
-				return false;
-			var kind = Kind;
-			if (kind != b.Kind)
-				return false;
-			if (compareStyles && Style != b.Style)
-				return false;
-			if (!Equals(Attrs, b.Attrs))
-				return false;
-			Debug.Assert(ArgCount == 0 && b.ArgCount == 0);
-			return object.Equals(Value, b.Value);
-		}
 		protected internal override int GetHashCode(int recurse, int styleMask)
 		{
 			int hash = (Value ?? "").GetHashCode() + 1;
@@ -137,20 +109,6 @@ namespace Loyc.Syntax
 
 		public abstract override LNode Clone();
 		public abstract override LNode WithAttrs(VList<LNode> attrs);
-		public override bool Equals(LNode b, bool compareStyles)
-		{
-			if (b == null)
-				return false;
-			var kind = Kind;
-			if (kind != b.Kind)
-				return false;
-			if (compareStyles && Style != b.Style)
-				return false;
-			if (!Equals(Args, b.Args) ||
-				!Equals(Attrs, b.Attrs))
-				return false;
-			return Equals(Target, b.Target, compareStyles);
-		}
 
 		// Hashcode computation can be costly for call nodes, so cache the result.
 		// (Equality testing can be even more expensive when two trees are equal,
@@ -181,7 +139,7 @@ namespace Loyc.Syntax
 		public override bool Calls(string name)                  { return Name.Name == name; }
 		public override bool CallsMin(Symbol name, int argCount) { return Name == name && ArgCount >= argCount; }
 		public override bool CallsMin(string name, int argCount) { return Name.Name == name && ArgCount >= argCount; }
-		public override bool HasSimpleHead()                     { var t = Target; return !t.IsCall && !t.HasAttrs; }
+		public override bool HasSimpleHead()                     { var t = Target; return !t.IsCall; }
 		public override bool HasSimpleHeadWithoutPAttrs()        { var t = Target; return !t.IsCall && !t.HasPAttrs(); }
 
 		public sealed override LNode WithArgs(Func<LNode, Maybe<LNode>> selector)

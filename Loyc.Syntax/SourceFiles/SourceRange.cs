@@ -11,12 +11,12 @@ namespace Loyc.Syntax
 	/// Holds a reference to a source file (ISourceFile&lt;char&gt;) and the
 	/// beginning and end indices of a range in that file.
 	/// </summary>
-    [DebuggerDisplay("{_source.FileName}[{_startIndex}+{_length}]")]
+    [DebuggerDisplay("{_source.FileName}[{_startIndex}, Length {_length}]")]
 	public struct SourceRange
 	{
 		public static readonly SourceRange Nowhere = new SourceRange(EmptySourceFile.Default, -1, 0);
 
-		public SourceRange(ISourceFile source, int beginIndex = -1, int length = -1)
+		public SourceRange(ISourceFile source, int beginIndex = -1, int length = 0)
 		{
 			_source = source;
 			_startIndex = beginIndex;
@@ -92,5 +92,9 @@ namespace Loyc.Syntax
 		{
 			return string.Format("{0}[{1}+{2}]", _source.FileName, _startIndex, _length);
 		}
+        public bool Contains(SourceRange inner)
+        {
+            return Source == inner.Source && StartIndex <= inner.StartIndex && EndIndex >= inner.EndIndex;
+        }
 	}
 }

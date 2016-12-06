@@ -11,8 +11,9 @@ using System.Linq;
 namespace Loyc.Collections
 {
 	/// <summary>
-	/// Work in progress. This class will enhance LINQ-to-Objects with 
-	/// type-preserving and/or higher-performance extension methods.
+	/// This class enhances LINQ-to-Objects with extension methods that preserve the
+	/// interface (e.g. Take(List&lt;int>) returns IList&lt;int>) and/or have higher
+	/// performance than the ones in System.Linq.Enumerable.
 	/// </summary><remarks>
 	/// For example, the <see cref="Enumerable.Last(IEnumerable{T})"/> extension 
 	/// method scans the entire list before returning the last item, while 
@@ -25,6 +26,39 @@ namespace Loyc.Collections
 		{
 			return list.Count;
 		}
+		public static int Count<T>(this IReadOnlyCollection<T> list)
+		{
+			return list.Count;
+		}
+		public static int Count<T>(this INegListSource<T> list)
+		{
+			return list.Count;
+		}
+
+		public static T FirstOrDefault<T>(this IList<T> list, T defaultValue = default(T))
+		{
+			if (list.Count > 0)
+				return list[0];
+			return defaultValue;
+		}
+		public static T FirstOrDefault<T>(this IListAndListSource<T> list, T defaultValue = default(T))
+		{
+			return FirstOrDefault((IListSource<T>)list, defaultValue);
+		}
+		public static T FirstOrDefault<T>(this IListSource<T> list)
+		{
+			bool _;
+			return list.TryGet(0, out _);
+		}
+		public static T FirstOrDefault<T>(this IListSource<T> list, T defaultValue)
+		{
+			bool fail;
+			var result = list.TryGet(0, out fail);
+			if (fail)
+				return defaultValue;
+			return result;
+		}
+
 		public static T Last<T>(this IList<T> list)
 		{
 			int last = list.Count - 1;
@@ -36,10 +70,6 @@ namespace Loyc.Collections
 		{
 			int last = list.Count - 1;
 			return last < 0 ? defaultValue : list[last];
-		}
-		public static int Count<T>(this IReadOnlyList<T> list)
-		{
-			return list.Count;
 		}
 		public static T Last<T>(this IReadOnlyList<T> list)
 		{
@@ -53,6 +83,22 @@ namespace Loyc.Collections
 			int last = list.Count - 1;
 			return last < 0 ? defaultValue : list[last];
 		}
+		public static T Last<T>(this IListAndListSource<T> list) { return Last((IList<T>)list); }
+		public static T LastOrDefault<T>(this IListAndListSource<T> list, T defaultValue = default(T))
+			{ return LastOrDefault((IList<T>)list, defaultValue); }
+		public static T Last<T>(this INegListSource<T> list)
+		{
+			int last = list.Max;
+			if (last < list.Min)
+				throw new EmptySequenceException();
+			return list[last];
+		}
+		public static T LastOrDefault<T>(this INegListSource<T> list, T defaultValue = default(T))
+		{
+			int last = list.Max;
+			return last < list.Min ? defaultValue : list[last];
+		}
+
 		public static IList<T> Skip<T>(this IList<T> list, int start)
 		{
 			return list.Slice(start);
@@ -69,5 +115,135 @@ namespace Loyc.Collections
 		{
 			return list.Slice(0, count);
 		}
+		public static IListSource<T> Skip<T>(this IListAndListSource<T> list, int start)
+		{
+			return list.Slice(start);
+		}
+		public static IListSource<T> Take<T>(this IListAndListSource<T> list, int count)
+		{
+			return list.Slice(0, count);
+		}
+		public static NegListSlice<T> Skip<T>(this INegListSource<T> list, int count)
+		{
+			CheckParam.IsNotNegative("count", count);
+			return new NegListSlice<T>(list, checked(list.Min + count), int.MaxValue);
+		}
+		public static NegListSlice<T> Take<T>(this INegListSource<T> list, int count)
+		{
+			CheckParam.IsNotNegative("count", count);
+			return new NegListSlice<T>(list, list.Min, count);
+		}
+
+		public static ListSlice<T> TakeWhile<T>(this IList<T> list, Func<T, bool> predicate)
+		{
+			Maybe<T> value;
+			for (int i = 0; ; i++) {
+				if (!(value = list.TryGet(i)).HasValue)
+					return new ListSlice<T>(list);
+				else if (!predicate(value.Value))
+					return new ListSlice<T>(list, 0, i);
+			}
+		}
+		public static Slice_<T> TakeWhile<T>(this IListSource<T> list, Func<T, bool> predicate)
+		{
+			Maybe<T> value;
+			for (int i = 0; ; i++) {
+				if (!(value = list.TryGet(i)).HasValue)
+					return new Slice_<T>(list);
+				else if (!predicate(value.Value))
+					return new Slice_<T>(list, 0, i);
+			}
+		}
+		public static NegListSlice<T> TakeWhile<T>(this INegListSource<T> list, Func<T, bool> predicate)
+		{
+			Maybe<T> value;
+			for (int i = 0; ; i++) {
+				if (!(value = list.TryGet(i, default(T))).HasValue)
+					return new NegListSlice<T>(list);
+				else if (!predicate(value.Value))
+					return new NegListSlice<T>(list, 0, i);
+			}
+		}
+		public static Slice_<T> TakeWhile<T>(this IListAndListSource<T> list, Func<T, bool> predicate)
+		{
+			return TakeWhile((IListSource<T>)list, predicate);
+		}
+
+		public static ListSlice<T> SkipWhile<T>(this IList<T> list, Func<T, bool> predicate)
+		{
+			Maybe<T> value;
+			for (int i = 0; ; i++) {
+				if (!(value = list.TryGet(i)).HasValue)
+					return new ListSlice<T>();
+				else if (!predicate(value.Value))
+					return new ListSlice<T>(list, i);
+			}
+		}
+		public static Slice_<T> SkipWhile<T>(this IListSource<T> list, Func<T, bool> predicate)
+		{
+			Maybe<T> value;
+			for (int i = 0; ; i++) {
+				if (!(value = list.TryGet(i)).HasValue)
+					return new Slice_<T>();
+				else if (!predicate(value.Value))
+					return new Slice_<T>(list, i);
+			}
+		}
+		public static NegListSlice<T> SkipWhile<T>(this INegListSource<T> list, Func<T, bool> predicate)
+		{
+			Maybe<T> value;
+			for (int i = 0; ; i++) {
+				if (!(value = list.TryGet(i, default(T))).HasValue)
+					return new NegListSlice<T>();
+				else if (!predicate(value.Value))
+					return new NegListSlice<T>(list, i);
+			}
+		}
+		public static Slice_<T> SkipWhile<T>(this IListAndListSource<T> list, Func<T, bool> predicate)
+		{
+			return SkipWhile((IListSource<T>)list, predicate);
+		}
+
+		/// <summary>Copies the contents of an IListSource or IReadOnlyList to an array.</summary>
+		public static T[] ToArray<T>(this IReadOnlyList<T> c)
+		{
+			var array = new T[c.Count];
+			for (int i = 0; i < array.Length; i++)
+				array[i] = c[i];
+			return array;
+		}
+		/// <summary>Copies the contents of an <see cref="INegListSource{T}"/> to an array.</summary>
+		public static T[] ToArray<T>(this INegListSource<T> c)
+		{
+			var array = new T[c.Count];
+			int min = c.Min;
+			for (int i = 0; i < array.Length; i++)
+				array[i] = c[i + min];
+			return array;
+		}
+
+		public static IListSource<TResult> Select<T, TResult>(this IListSource<T> source, Func<T, TResult> selector)
+		{
+			return new SelectListSource<T, TResult>(source, selector);
+		}
+		public static IList<TResult> Select<T, TResult>(this IList<T> source, Func<T, TResult> selector)
+		{
+			return new SelectList<T, TResult>(source, selector);
+		}
+		public static IListSource<TResult> Select<T, TResult>(this IListAndListSource<T> source, Func<T, TResult> selector)
+		{
+			return new SelectListSource<T, TResult>(source, selector);
+		}
+
+		// TODO:
+		// public static IEnumerable<TSource> Reverse<TSource>(this IEnumerable<TSource> source);
+		// public static IEnumerable<TResult> Select<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, TResult> selector);
+		//     Projects each element of a sequence into a new form by incorporating the element's index.
+		//   source:
+		//     A sequence of values to invoke a transform function on.
+		//   selector:
+		//     A transform function to apply to each source element; the second parameter of
+		//     the function represents the index of the source element.
+		// public static IEnumerable<TResult> Select<TSource, TResult>(this IEnumerable<TSource> source, Func<TSource, int, TResult> selector);
 	}
 }

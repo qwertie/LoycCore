@@ -148,6 +148,7 @@
       <RequiredTargetFramework>3.5</RequiredTargetFramework>
     </Reference>
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Numerics" />
     <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml" />
     <Reference Include="System.Xml.Linq">
@@ -159,6 +160,12 @@
     <Reference Include="Theraot.Core">
       <HintPath>..\Lib\DotNet35\Theraot.Core.dll</HintPath>
     </Reference>
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFrameworkVersion)'=='v4.0'">
+    <Reference Include="System.Numerics" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetFrameworkVersion)'=='v4.5'">
+    <Reference Include="System.Numerics" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Essentials\ExtensionsTests.cs" />
@@ -186,10 +193,15 @@
     <Compile Include="Collections\SetTests.cs" />
     <Compile Include="Collections\SparseAListTests.cs" />
     <Compile Include="Syntax\IndentTokenGeneratorTests.cs" />
-    <Compile Include="Syntax\LesLexerTests.cs" />
-    <Compile Include="Syntax\LesParserTests.cs" />
-    <Compile Include="Syntax\LesPrinterAndParserTests.cs" />
-    <Compile Include="Syntax\LesPrinterTests.cs" />
+    <Compile Include="Syntax\IndexPositionMapperTests.cs" />
+    <Compile Include="Syntax\Les3LexerTests.cs" />
+    <Compile Include="Syntax\Les3ParserTests.cs" />
+    <Compile Include="Syntax\Les3PrinterAndParserTests.cs" />
+    <Compile Include="Syntax\Les3PrinterTests.cs" />
+    <Compile Include="Syntax\Les2LexerTests.cs" />
+    <Compile Include="Syntax\Les2ParserTests.cs" />
+    <Compile Include="Syntax\Les2PrinterAndParserTests.cs" />
+    <Compile Include="Syntax\Les2PrinterTests.cs" />
     <Compile Include="Syntax\LexerSourceTest.out.cs">
       <DependentUpon>LexerSourceTest.ecs</DependentUpon>
       <AutoGen>True</AutoGen>
@@ -200,6 +212,7 @@
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
     </Compile>
+    <Compile Include="Syntax\StandardTriviaInjectorTests.cs" />
     <Compile Include="Syntax\StreamCharSourceTests.cs" />
     <Compile Include="Syntax\TokensToTreeTests.cs" />
     <Compile Include="Syntax\TokenTests.cs" />
@@ -272,7 +285,7 @@
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildBinPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it.
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
   </Target>

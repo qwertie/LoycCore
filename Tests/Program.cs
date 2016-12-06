@@ -69,6 +69,12 @@ namespace Loyc.Tests
 						ConsoleMessageSink.WriteColoredMessage(ConsoleColor.White, i+1, menu[i].Key);
 						errorCount += menu[i].Value();
 					}
+					if (errorCount == 0)
+						ConsoleMessageSink.WriteColoredMessage(ConsoleColor.White, null,
+							"All test(s) passed (except known failures, if any).");
+					else
+						ConsoleMessageSink.WriteColoredMessage(ConsoleColor.Red, null,
+							"{0} test(s) unexpectedly failed in total.".Localized(errorCount));
 				} else {
 					int i = ParseHelpers.HexDigitValue(c);
 					if (i > 0 && i <= menu.Count)
@@ -139,10 +145,15 @@ namespace Loyc.Tests
 		{
 			return MiniTest.RunTests.RunMany(
 				new TokenTests(),
+				new IndexPositionMapperTests(),
 				new IndentTokenGeneratorTests(),
-				new LesLexerTests(),
+				new StandardTriviaInjectorTests(),
+				new Les2LexerTests(),
 				new LesParserTests(),
-				new LesPrinterTests(),
+				new Les2PrinterTests(),
+				new Les3LexerTests(),
+				new Les3ParserTests(),
+				new Les3PrinterTests(),
 				new TokensToTreeTests(),
 				new StreamCharSourceTests(),
 				new LexerSourceTests_Calculator(),

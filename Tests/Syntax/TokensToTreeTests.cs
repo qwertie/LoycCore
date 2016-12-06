@@ -126,7 +126,7 @@ namespace Loyc.Syntax.Lexing
 			");
 			Expect(list, A(TT.Id, TT.LBrace, TT.RBrace, TT.Semicolon), _("a"));
 			Expect(list[1].Children, A(TT.Id, TT.LParen, TT.RParen, TT.Semicolon), _("b"));
-			Expect(list[1].Children[1].Children, A(TT.Id, TT.Not, TT.RBrace), _("frack"), _("!"));
+			Expect(list[1].Children[1].Children, A(TT.Id, TT.Not, TT.RBrace), _("frack"), _("'!"));
 		}
 
 		[DebuggerStepThrough] static TokenType[] A(params TokenType[] list) { return list; }
@@ -134,7 +134,7 @@ namespace Loyc.Syntax.Lexing
 
 		List<Token> Lex(string input, bool skipWS = true)
 		{
-			var lexer = new LesLexer(input, MessageSink.Trace);
+			var lexer = new Les2Lexer(input, MessageSink.Trace);
 			var lexer2 = new TokensToTree(lexer, skipWS);
 			var list = new List<Token>();
 			Maybe<Token> token;

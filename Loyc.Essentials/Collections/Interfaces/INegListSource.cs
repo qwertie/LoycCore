@@ -13,7 +13,11 @@ namespace Loyc.Collections
 	/// for (int i = list.Min; i &lt;= list.Max; i++) { ... }
 	/// </code>
 	/// </remarks>
+	#if DotNet2 || DotNet3
 	public interface INegListSource<T> : IReadOnlyCollection<T>
+	#else
+	public interface INegListSource<out T> : IReadOnlyCollection<T>
+	#endif
 	{
 		/// <summary>Returns the minimum valid index in the collection.</summary>
 		int Min { get; }
@@ -77,6 +81,19 @@ namespace Loyc.Collections
 			T result = list.TryGet(index, out fail);
 			if (fail)
 				return defaultValue;
+			else
+				return result;
+		}
+
+		/// <summary>Tries to get a value from the list at the specified index.</summary>
+		/// <param name="index">The index to access. Valid indexes are between Min and Max.</param>
+		/// <returns>The retrieved value, or <see cref="Maybe{T}.NoValue"/> if the index provided was not valid.</returns>
+		public static Maybe<T> TryGet<T>(this INegListSource<T> list, int index)
+		{
+			bool fail;
+			T result = list.TryGet(index, out fail);
+			if (fail)
+				return default(Maybe<T>);
 			else
 				return result;
 		}

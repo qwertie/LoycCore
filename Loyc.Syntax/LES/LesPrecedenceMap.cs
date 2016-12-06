@@ -25,15 +25,16 @@ namespace Loyc.Syntax.Les
 
 		/// <summary>Forgets previously encountered operators to save memory.</summary>
 		public void Reset() {
-			this[OperatorShape.Suffix] = Pair.Create(PredefinedSuffixPrecedence.AsMutable(), P.Suffix2);
-			this[OperatorShape.Prefix] = Pair.Create(PredefinedPrefixPrecedence.AsMutable(), P.Reserved);
-			this[OperatorShape.Infix]  = Pair.Create(PredefinedInfixPrecedence .AsMutable(), P.Reserved);
+			this[OperatorShape.Suffix] = Pair.Create(PredefinedSuffixPrecedence.AsMutable(), P.Primary);
+			this[OperatorShape.Prefix] = Pair.Create(PredefinedPrefixPrecedence.AsMutable(), P.Other);
+			this[OperatorShape.Infix]  = Pair.Create(PredefinedInfixPrecedence .AsMutable(), P.Other);
 			_suffixOpNames = null;
 		}
 
-		/// <summary>Gets the precedence of a prefix, suffix, or infix operator in 
-		/// LES, under the assumption that the operator isn't surrounded in 
-		/// backticks (in which case its precedence is always Backtick).</summary>
+		/// <summary>Gets the precedence in LES of a prefix, suffix, or infix operator.</summary>
+		/// <param name="shape">Specifies which precedence table and rules to use 
+		/// (Prefix, Suffix or Infix). Note: when this is Suffix, "suf" must not be 
+		/// part of the name in <c>op</c> (see <see cref="IsSuffixOperatorName"/>)</param>
 		/// <param name="op">Parsed form of the operator. op must be a Symbol, but 
 		/// the parameter has type object to avoid casting Token.Value in the parser.</param>
 		public Precedence Find(OperatorShape shape, object op, bool cacheWordOp = true)
@@ -69,11 +70,11 @@ namespace Loyc.Syntax.Les
 				{ S._Negate,     P.Prefix      }, // -
 				{ S.DotDot,      P.PrefixDots  }, // ..
 				{ S.OrBits,      P.PrefixOr    }, // |
-				{ S.Div,         P.Reserved    }, // /
-				{ S.LT,          P.Reserved    }, // <
-				{ S.GT,          P.Reserved    }, // >
-				{ S.QuestionMark,P.Reserved    }, // ?
-				{ S.Assign,      P.Reserved    }, // =
+				{ S.Div,         P.Prefix      }, // /
+				//{ S.LT,          P.Reserved    }, // <
+				//{ S.GT,          P.Reserved    }, // >
+				//{ S.QuestionMark,P.Reserved    }, // ?
+				//{ S.Assign,      P.Reserved    }, // =
 			}.AsImmutable();
 
 		protected static readonly Map<object, Precedence> PredefinedSuffixPrecedence =
@@ -116,51 +117,76 @@ namespace Loyc.Syntax.Les
 				{ S.Or,          P.Or         }, // ||
 				{ S.Xor,         P.Or         }, // ^^
 				{ S.QuestionMark,P.IfElse     }, // ?
-				{ S.Colon,       P.Reserved   }, // :
+				{ S.Colon,       P.IfElse     }, // :
 				{ S.Assign,      P.Assign     }, // =
 				{ S.Lambda,      P.Lambda     }, // =>
-				{ S.NotBits,     P.Reserved   }, // ~
+				{ S.NotBits,     P.Other      }, // ~
 			}.AsImmutable();
 		
 		protected Precedence FindPrecedence(MMap<object,Precedence> table, object symbol, Precedence @default, bool cacheWordOp)
 		{
 			// You can see the official rules in the LesPrecedence documentation.
+			
 			// Rule 1 (for >= <= != ==) is covered by the pre-populated contents 
-			// of the table, and the pre-populated table helps interpret rules 
-			// 3-4 also.
+			// of the table, and the pre-populated table helps interpret other 
+			// rules too.
+			CheckParam.IsNotNull("symbol", symbol);
 			Precedence prec;
 			if (table.TryGetValue(symbol, out prec))
 				return prec;
 
-			string sym = (symbol ?? "").ToString();
-			if (sym == "") return @default; // empty operator!
-			// Note: all one-character operators should have been found in the table
-			char first = sym[0], last = sym[sym.Length - 1];
+			string sym = symbol.ToString();
+			if (sym.Length <= 1 || sym[0] != '\'')
+				return @default; // empty or non-operator
 
-			if (last == '=' && first != '=' && table == this[OperatorShape.Infix].A)
-				return table[symbol] = table[S.Assign];
-			
-			var twoCharOp = GSymbol.Get(first.ToString() + last);
+			// Note: all one-character operators should have been found in the table
+			char first = sym[1], last = sym[sym.Length - 1];
+			bool isInfix = table == this[OperatorShape.Infix].A;
+
+			if (isInfix && last == '=') {
+				if (first == '=' || first == '!')
+					return table[symbol] = P.Compare;
+				else
+					return table[symbol] = P.Assign;
+			}
+
+			var twoCharOp = GSymbol.Get("'" + first + last);
 			if (table.TryGetValue(twoCharOp, out prec))
 				return table[symbol] = prec;
 
-			var oneCharOp = GSymbol.Get(last.ToString());
+			var oneCharOp = GSymbol.Get("'" + first);
 			if (table.TryGetValue(oneCharOp, out prec))
 				return table[symbol] = prec;
 
-			// Default precedence is used for word operators
+			if (isInfix && char.IsLower(first))
+				return table[symbol] = P.LowerKeyword;
+
+			// Default precedence is used for anything else
 			if (cacheWordOp)
-				table[symbol] = @default;
+				return table[symbol] = @default;
 			return @default;
 		}
 
 		static readonly BitArray OpChars = GetOpChars();
+		static readonly BitArray OpCharsEx = GetOpCharsEx();
 		private static BitArray GetOpChars()
 		{
 			var map = new BitArray(128);
 			map['~']  = map['!'] = map['%'] = map['^'] = map['&'] = map['*'] = true;
 			map['-'] = map['+'] = map['='] = map['|'] = map['<'] = map['>'] = true;
-			map['/'] = map['?'] = map[':'] = map['.'] = map['$'] = true;
+			map['/'] = map['?'] = map[':'] = map['.'] = true;
+			return map;
+		}
+		private static BitArray GetOpCharsEx()
+		{
+			var map = GetOpChars();
+			map['$'] = true;
+			for (char c = 'a'; c <= 'z'; c++)
+				map[c] = true;
+			for (char c = 'A'; c <= 'Z'; c++)
+				map[c] = true;
+			for (char c = '0'; c <= '9'; c++)
+				map[c] = true;
 			return map;
 		}
 		/// <summary>Returns true if this character is one of those that operators are normally made out of in LES.</summary>
@@ -168,43 +194,57 @@ namespace Loyc.Syntax.Les
 		{
 			return (uint)c < (uint)OpChars.Count ? OpChars[c] : false;
 		}
+		/// <summary>Returns true if this character is one of those that can appear 
+		/// in "extended" LESv3 operators that start with an apostrophe.</summary>
+		public static bool IsOpCharEx(char c)
+		{
+			return (uint)c < (uint)OpCharsEx.Count ? OpCharsEx[c] : false;
+		}
+		
 		/// <summary>Returns true if the given Symbol can be printed as an operator 
-		/// without escaping it.</summary>
+		/// without escaping it (LESv2) or adding an apostrophe on the front (LESv3).</summary>
 		/// <remarks>The parser should read something like <c>+/*</c> as an operator
 		/// with three characters, rather than "+" and a comment, but the printer 
-		/// should be conservative, so this function returns false in such a case:
-		/// "Be liberal in what you accept, and conservative in what you produce."</remarks>
-		public static bool IsNaturalOperator(Symbol s)
+		/// is more conservative, so this function returns false in such a case.</remarks>
+		public static bool IsNaturalOperator(string name)
 		{
-			string name = s.Name;
-			if (name.Length == 0)
+			if (name.Length <= 1 || name[0] != '\'')
+				return false; // optimized path
+			return IsOperator(name, OpChars, true, "'") || name == "'$" || IsOperator(name, OpChars, true, "'$");
+		}
+
+		/// <summary>Returns true if the given Symbol can ever be used as an "extended" 
+		/// binary operator in LESv3.</summary>
+		/// <remarks>A binary operator's length must be between 2 and 255, its name must
+		/// start with an apostrophe, and each remaining character must be punctuation marks 
+		/// from natural operators and/or characters from the set 
+		/// {'#', '_', 'a'..'z', 'A'..'Z', '0'..'9', '$'}.</remarks>
+		public static bool IsExtendedOperator(string name, string expectPrefix = "'")
+		{
+			return IsOperator(name, OpCharsEx, false, expectPrefix);
+		}
+
+		static bool IsOperator(string name, BitArray opChars, bool rejectComment, string expectPrefix)
+		{
+			int i = expectPrefix.Length;
+			if (!name.StartsWith(expectPrefix))
 				return false;
-			for (int i = 0; ;) {
+			if (i >= name.Length || name.Length > 255)
+				return false;
+			for (;;) {
 				char c = name[i];
-				if (!IsOpChar(c))
+				if ((uint)c > (uint)opChars.Count || !opChars[c])
 					return false;
 				if (++i == name.Length)
 					break;
-				if (c == '/' && (name[i] == '/' || name[i] == '*'))
+				if (c == '/' && rejectComment && (name[i] == '/' || name[i] == '*'))
 					return false; // oops, looks like a comment
 			}
 			return true;
 		}
 
-		// /// <summary>Returns true if a given Les operator can only be printed with 
-		// /// backticks, because a leading backslash is insufficient.</summary>
-		// public static bool RequiresBackticks(Symbol s)
-		// {
-		// 	string name = s.Name;
-		// 	for (int i = 0; i < name.Length; i++)
-		// 		if (!IsOpChar(name[i]) && !char.IsLetter(name[i]) && !char.IsDigit(name[i]) 
-		// 			&& name[i] != '_' && name[i] != '\'')
-		// 			return true;
-		// 	return name.Length == 0;
-		// }
-
-		/// <summary>Given a normal operator symbol like <c>(Symbol)"++"</c>, gets
-		/// the suffix form of the name, such as <c>(Symbol)"suf++"</c>.</summary>
+		/// <summary>Given a normal operator symbol like <c>(Symbol)"'++"</c>, gets
+		/// the suffix form of the name, such as <c>(Symbol)"'++suf"</c>.</summary>
 		/// <remarks>op must be a Symbol, but the parameter has type object to avoid casting Token.Value in the parser.</remarks>
 		public Symbol ToSuffixOpName(object symbol)
 		{
@@ -217,28 +257,26 @@ namespace Loyc.Syntax.Les
 			//if (was.EndsWith("\\"))
 			//	return _suffixOpNames[symbol] = (Symbol)symbol;
 			//else
-				return _suffixOpNames[symbol] = GSymbol.Get(@"suf" + symbol.ToString());
+				return _suffixOpNames[symbol] = GSymbol.Get(symbol.ToString() + "suf");
 		}
 
 		/// <summary>Decides whether the name appears to represent a suffix operator 
 		/// of the form <c>sufOP</c> or <c>OP\</c>.</summary>
 		/// <param name="name">Potential operator name to evaluate.</param>
-		/// <param name="bareName">If the name starts with "suf", this is the same 
+		/// <param name="bareName">If the name ends with "suf", this is the same 
 		/// name without "suf", otherwise it is set to <c>name</c> itself. This
 		/// output is calculated even if the function returns false.</param>
 		/// <param name="checkNatural">If true, part of the requirement for 
 		/// returning true will be that IsNaturalOperator(bareName) == true.</param>
 		public static bool IsSuffixOperatorName(Symbol name, out Symbol bareName, bool checkNatural)
 		{
-			if (name.Name.StartsWith("suf"))
-				bareName = (Symbol)name.Name.Substring(3);
-			else {
+			if (name.Name.EndsWith("suf")) {
+				bareName = (Symbol)name.Name.Substring(0, name.Name.Length - 3);
+				return !checkNatural || IsNaturalOperator(bareName.Name);
+			} else {
 				bareName = name;
 				return false;
-			//	if (!name.Name.EndsWith(@"\"))
-			//		return false;
 			}
-			return !checkNatural || IsNaturalOperator(bareName);
 		}
 	}
 }

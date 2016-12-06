@@ -13,18 +13,6 @@ namespace Loyc.Syntax
 	/// <summary>The three kinds of nodes in a Loyc tree</summary>
 	public enum LNodeKind { Id, Literal, Call }
 
-	/// <summary>Signature for a method that serializes a Loyc tree to text. Each
-	/// programming language will have one (when complete).</summary>
-	/// <param name="node">Node to print</param>
-	/// <param name="target">Output buffer</param>
-	/// <param name="mode">A language-specific way of modifying printer behavior.
-	/// The printer should ignore the mode object if it does not not understand it.</param>
-	/// <param name="indentString">A string to print for each level of indentation, such as a tab or four spaces.</param>
-	/// <param name="lineSeparator">Line separator, typically "\n" or "\r\n".</param>
-	/// <remarks>This delegate only prints to a StringBuilder. Printing directly to 
-	/// a stream requires language-specific facilities.</remarks>
-	public delegate void LNodePrinter(LNode node, StringBuilder target, IMessageSink errors, object mode = null, string indentString = "\t", string lineSeparator = "\n");
-
 	/// <summary>All nodes in a Loyc syntax tree share this base class.</summary>
 	/// <remarks>
 	/// Loyc defines only three types of nodes: simple symbols, literals, and calls.
@@ -119,231 +107,6 @@ namespace Loyc.Syntax
 	/// "detach" a node from one place, or duplicate it, before it can be inserted 
 	/// in another place.
 	///
-	/// <!-- screws up doxygen
-	/// <h3>Loyc and EC#</h3>
-	/// 
-	/// Now let's talk about EC# syntax and how it relates to this class.
-	/// <para/>
-	/// EC# supports a generalized C-style syntax which will be described briefly
-	/// here. Basically, almost any code that a programming student might mistake 
-	/// for real C# code is legal, and there is some odd-looking syntax you've 
-	/// never seen before that is also legal.
-	/// <para/>
-	/// Also, virtually any tree of nodes can be represented in EC# source code 
-	/// using a prefix notation, which helps you understand Loyc ASTs because
-	/// the prefix notation closely corresponds to the AST. For example, 
-	/// @=(x, @*(y, 2)) is equivalent to the expression x = y * 2. This notation 
-	/// tells you that 
-	/// - there are two nodes with two arguments each, 
-	/// - the outer one is named "=" and the inner is named "*"
-	/// The syntax tree built from these two representations is identical.
-	/// <para/>
-	/// Prefix notation can be freely mixed with normal EC# code, although usually 
-	/// there is no reason to do so:
-	/// <para/>
-	/// public Point OneTwo = MakePoint(1, 2);
-	/// public #var(Point, Origin(MakePoint(0, 0)));
-	/// public static #fn(MakePoint, #(int x, int y), System.Drawing.Point, #{
-	///		return new Point(x, y);
-	///	});
-	/// <para/>
-	/// The prefix notation often involves special identifiers of the form #X, 
-	/// where X is an identifier (or keyword). In the LES and EC# parsers, the # 
-	/// character is considered a normal part of an identifier, no different than
-	/// a letter (A-Z) or an underscore (_). However, the # is "special" in the
-	/// sense that when a special construct (like a method, or a field declaration)
-	/// is converted to a Loyc tree, the Loyc tree represents that special 
-	/// construct using an identifier that starts with "#".
-	/// <para/>
-	/// Code in prefix notation also often has identifiers of the form @X, where X is
-	/// <ol>
-	/// <li>An operator such as + or ==</li>
-	/// <li>A C# keyword</li>
-	/// <li>A backquoted string</li>
-	/// </ol>
-	/// The @ character is <i>not</i> part of the identifier; it merely indicates
-	/// that the characters after the @ symbol represent an identifier, rather than
-	/// an operator or keyword. For example, "==" is normally an operator, and 
-	/// "class" is normally a keyword, but @== and @class are both identifiers,
-	/// not operators or keywords.
-	/// <para/>
-	/// The following examples show how source code text is translated into symbol names:
-	/// <pre>
-	/// #foo     ==> "#foo"        @>>           ==> ">>"
-	/// #?       ==> "?"           @`{}`         ==> "{}"
-	/// #while   ==> "#while"      @`#Newline\n` ==> "#Newline\n"
-	/// @#while  ==> "#while"      @`hi there!`  ==> "hi there!"
-	/// @while   ==> "while"
-	/// </pre>
-	/// Identifiers that start with # are parsed like normal identifiers, but 
-	/// are reserved for things that have special semantic meaning. For example, 
-	/// "#class" is treated by the parser like any other identifier, but it has
-	/// the same semantic meaning as "class", although a structure defined with 
-	/// "#class" looks quite different from the same structure defined using 
-	/// "class". For example, the following forms are equivalent:
-	/// <pre>
-	/// #class(X, #(), @`{}`(int x));
-	/// class X { int x; }
-	/// </pre>
-	/// The #class(...) form uses prefix notation, and it demonstrates the
-	/// structure of the Loyc tree for a class declaration.
-	/// <para/>
-	/// As another example, "#return(7);" is syntactically a function call to a 
-	/// function called "#return". Although the parser treats it like a function 
-	/// call, it produces the same syntax tree as "return 7;" does.
-	/// <para/>
-	/// Ordinary method calls like <c>Foo(x, y)</c> count as prefix notation, and 
-	/// in EC# there is actually a non-prefix notation for this call: <c>x `Foo` y</c>.
-	/// Both forms are equivalent, but the infix notation can only be used when you
-	/// are calling a method that takes two arguments (also, the string `Foo` should
-	/// be a simple identifier; if it contains a dot, it is treated as part of the
-	/// identifier name, not as a normal dot operator.)
-	/// <para/>
-	/// So #class is a keyword that is parsed like an identifier, but this is 
-	/// different from the notation @class which already exists in plain C#.
-	/// @class is an ordinary identifier that has a "@" sign in front to ensure 
-	/// that the compiler does not treat it like a keyword at all. #class is a 
-	/// special identifier that is parsed like an identifier but then treated like 
-	/// a keyword after parsing is complete.
-	/// <para/>
-	/// In other words, to the parser, @struct and #struct are the same except that 
-	/// the parser removes the @ sign but not the # sign. However, later stages of 
-	/// the compiler treat @struct (now stored without the @ sign) and #struct quite 
-	/// differently, as <c>#struct</c> is treated like a keyword and <c>struct</c> 
-	/// is not.
-	/// <para/>
-	/// Since the "#" character is already reserved in plain C# for preprocessor 
-	/// directives, any node name such as "#if" and "#else" that could be mistaken
-	/// for an old-fashioned preprocessor directive must be preceded by "@" at the 
-	/// beginning of a line. For example, the statement "if (failed) return;" can 
-	/// be represented in prefix notation as "@#if(failed, return)", although the 
-	/// node name of "@#if" is actually "#if" (while the node name of the 
-	/// preprocessor directive "#if" would be "##if", and the node name of "return"
-	/// is actually "#return"). Please note that preprocessor directives themselves 
-	/// are not part of the normal syntax tree, because they can appear 
-	/// midstatement. For example, this is valid C#:
-	/// <pre>
-	/// if (condition1
-	///    #if DEBUG
-	///       &amp;&amp; condition2
-	///    #endif
-	///    ) return;
-	/// </pre>
-	/// Preprocessor statements will be processed early in the compiler and then 
-	/// deleted.
-	/// <para/>
-	/// The special #X tokens don't require an argument list, although the compiler
-	/// expects most of them to have one (and often it must have a specific length).
-	/// Again, this doesn't matter for parsing, only for later stages of analysis.
-	/// <para/>
-	/// Any statement or expression can have attributes attached to it; when 
-	/// attributes are seen beside a statement, they are attached to the root node 
-	/// of that statement. In this example, the attribute is attached to the = 
-	/// operator:
-	/// <pre>
-	/// [PointlessAttribute(true)] x = y * 2;
-	/// </pre>
-	/// Attributes are allowed not just at the beginning of a statement, but at the 
-	/// beginning of any subexpression in parenthesis:
-	/// <pre>
-	/// Debug.Assert(x == ([PointlessAttribute(true)] y + 2));
-	/// </pre>
-	/// Here, the PointlessAttribute is attached to the addition operator (+).
-	/// These attributes are simply normal EC# nodes (arbitrary expressions), so 
-	/// they don't have to look like normal attributes:
-	/// <pre>
-	/// [TheKing is dead] LongLive(TheKing);
-	/// </pre>
-	/// Applying attributes to executable statements has no predefined meaning; A 
-	/// warning is issued if the compiler encounters an attribute where one is not 
-	/// allowed in plain C#, or if the syntax cannot be interpreted as an 
-	/// attribute. The parser supports this feature because it is sometimes useful 
-	/// in metaprogramming and DSLs.
-	/// <para/>
-	/// Because an attribute must be attached to something, an "assembly:" 
-	/// attribute is represented as an #assembly node with an attribute attached:
-	/// <pre>
-	/// [assembly: AssemblyTitle("MyApp")]  // Normal EC#
-	/// [AssemblyTitle("MyApp")] #assembly; // The way EC# sees it internally
-	/// </pre>
-	/// (assembly and module attributes must be special-cased anyway, since it 
-	/// doesn't make sense for them to be attached to whatever follows them.)
-	/// <para/>
-	/// Unlike in plain C#, by the way, EC# labels do not have to be attached to 
-	/// anything; they are considered statements by themselves:
-	/// <pre>
-	/// void f() {
-	///    goto end;
-	///    end:       // OK in EC#, syntax error in plain C#
-	/// }
-	/// </pre>
-	/// Perhaps the most interesting thing about EC# is that it is actually an 
-	/// expression-based language, like LISP: everything in EC# can be considered
-	/// an expression! For example, instead of writing a method as a list of 
-	/// statements, we can write it as a list of expressions:
-	/// <pre>
-	/// // Normal EC#
-	///	public static char HexDigitChar(int value)
-	///	{
-	///		Debug.Assert(16u > (uint)value);
-	///		if ((uint)value >= 10)
-	///			return (char)('A' - 10 + value);
-	///		else
-	///			return (char)('0' + value);
-	///	}
-	///	// Bizarro EC#
-	///	[#public, #static] #fn(HexDigitChar, #(#var(int, value)), #char, #
-	///	(
-	///		Debug.Assert(16u > (uint)value),
-	///		#if ((uint)value >= 10,
-	///			#return((char)('A' - 10 + value)),
-	///			#return((char)('0' + value)));
-	///	);
-	/// </pre>
-	/// Just so we're clear, you're not supposed to write "bizarro" code, but this
-	/// notation can help you understand the underlying representation. The parser
-	/// basically operates in two modes, one for expressions and one for
-	/// statements. Statement mode allows certain constructs like "if", "while" 
-	/// and "class" that expression mode does not understand. But once parsing is 
-	/// finished, the code is just a tree of nodes with almost nothing to
-	/// distinguish statements from expressions.
-	/// <para/>
-	/// EC# adopts a convention from LISP: the value of the final statement in a 
-	/// block is the value of the block as a whole. This can be used to simplify 
-	/// method and property definitions:
-	/// <para/>
-	///	int _value;
-	///	public int Value { get { _value } }
-	/// <para/>
-	/// The EC# if-else and switch statements (but not loops) work the same way, 
-	/// and you can put a braced block in the middle of any expression:
-	/// <pre>
-	/// int hexChar = {
-	///			if ((uint)value >= 10)
-	///				'A' - 10
-	///			else
-	///				'0'
-	///		} + value;
-	/// </pre>
-	/// The braced block is represented by a {} node, which introduces a new scope.
-	/// In contrast, the special # node type (the "list marker"), does not create 
-	/// a new scope. It is normally used with expression syntax:
-	/// <pre>
-	/// var three = #(Console.WriteLine("Fetching the three!"), 3);
-	/// var eight = #(int x = 5, three + x);
-	/// var seven = x + 2;
-	/// </pre>
-	/// Since # does not create a new scope, the variable "x" is created in the 
-	/// outer scope, where it can be used to compute the value of seven.
-	/// The # keyword is intended mostly to express lists with prefix notation, but 
-	/// it can be used with braces in case there is a need to switch back to 
-	/// statement notation. 
-	/// <para/>
-	/// The above code is a bit confusing because of how it is written; EC# is 
-	/// meant for mature people who have enough sense not to write confusing code 
-	/// like this.
-	/// -->
-	/// 
 	/// <h3>The reimplementation</h3>
 	/// 
 	/// This implementation has been redesigned (in Subversion, the last version
@@ -374,7 +137,7 @@ namespace Loyc.Syntax
 	/// the Target is not a symbol, the call has no name.)
 	/// <para/>
 	/// An expression in parenthesis is now represented by a call with the
-	/// #trivia_inParens attribute; use <see cref="IsParenthesizedExpr"/> to 
+	/// #trivia_inParens attribute; use <see cref="LNodeExt.IsParenthesizedExpr"/> to 
 	/// detect the parentheses.
 	/// <para/>
 	/// The problems that motivated a redesign are described at
@@ -490,7 +253,7 @@ namespace Loyc.Syntax
 	/// code to ensure nulls are not placed in Args and Attrs (<see cref="NoNulls"/>),
 	/// but only in debug builds, since null-checking is fairly expensive.
 	/// </remarks>
-	public abstract class LNode : ICloneable<LNode>, IEquatable<LNode>, IHasLocation, IHasValue<object>, INegListSource<LNode>
+	public abstract class LNode : ILNode, ICloneable<LNode>, IEquatable<LNode>, IHasLocation, IHasValue<object>, INegListSource<LNode>
 	{
 		#region Constructors and static node creator methods
 
@@ -509,7 +272,7 @@ namespace Loyc.Syntax
 
 		/// <summary>The empty identifier, used to represent missing information.</summary>
 		public static readonly IdNode Missing = Id(CodeSymbols.Missing);
-		
+
 		protected static readonly CallNode EmptySplice = Call(CodeSymbols.Splice);
 
 		public static IdNode Id(Symbol name, LNode prototype) { return new StdIdNode(name, prototype); }
@@ -522,10 +285,9 @@ namespace Loyc.Syntax
 		public static CallNode Call(LNode target, LNode prototype) { return new StdComplexCallNode(target, VList<LNode>.Empty, prototype); }
 		public static CallNode Call(Symbol name, VList<LNode> args, LNode prototype) { return new StdSimpleCallNode(name, args, prototype); }
 		public static CallNode Call(LNode target, VList<LNode> args, LNode prototype) { return new StdComplexCallNode(target, args, prototype); }
-		public static CallNode Call(VList<LNode> attrs, Symbol name, VList<LNode> args, LNode prototype) { return new  StdSimpleCallNodeWithAttrs(attrs, name, args, prototype); }
+		public static CallNode Call(VList<LNode> attrs, Symbol name, VList<LNode> args, LNode prototype) { return new StdSimpleCallNodeWithAttrs(attrs, name, args, prototype); }
 		public static CallNode Call(VList<LNode> attrs, LNode target, VList<LNode> args, LNode prototype) { return new StdComplexCallNodeWithAttrs(attrs, target, args, prototype); }
 		public static CallNode Trivia(Symbol name, object value, LNode prototype) { return new StdTriviaNode(name, value, prototype); }
-		public static LNode InParens(LNode node) { return node.PlusAttr(Id(CodeSymbols.TriviaInParens, node.Range)); }
 
 		public static IdNode Id(Symbol name, SourceRange range, NodeStyle style = NodeStyle.Default) { return new StdIdNode(name, range, style); }
 		public static IdNode Id(string name, SourceRange range, NodeStyle style = NodeStyle.Default) { return new StdIdNode(GSymbol.Get(name), range, style); }
@@ -534,29 +296,30 @@ namespace Loyc.Syntax
 		public static LiteralNode Literal(object value, SourceRange range, NodeStyle style = NodeStyle.Default) { return new StdLiteralNode(value, range, style); }
 		public static LiteralNode Literal(VList<LNode> attrs, object value, SourceRange range, NodeStyle style = NodeStyle.Default) { return new StdLiteralNodeWithAttrs(attrs, value, range, style); }
 		public static CallNode Call(Symbol name, SourceRange range, NodeStyle style = NodeStyle.Default) { return new StdSimpleCallNode(name, VList<LNode>.Empty, range, style); }
+		public static CallNode Call(Symbol name, SourceRange range, int targetStart, int targetEnd, NodeStyle style = NodeStyle.Default) { return new StdSimpleCallNode(name, VList<LNode>.Empty, range, targetStart, targetEnd, style); }
 		public static CallNode Call(LNode target, SourceRange range, NodeStyle style = NodeStyle.Default) { return new StdComplexCallNode(target, VList<LNode>.Empty, range, style); }
 		public static CallNode Call(Symbol name, VList<LNode> args, SourceRange range, NodeStyle style = NodeStyle.Default) { return new StdSimpleCallNode(name, args, range, style); }
+		public static CallNode Call(Symbol name, VList<LNode> args, SourceRange range, int targetStart, int targetEnd, NodeStyle style = NodeStyle.Default) { return new StdSimpleCallNode(name, args, range, targetStart, targetEnd, style); }
 		public static CallNode Call(LNode target, VList<LNode> args, SourceRange range, NodeStyle style = NodeStyle.Default) { return new StdComplexCallNode(target, args, range, style); }
 		public static CallNode Call(VList<LNode> attrs, Symbol name, VList<LNode> args, SourceRange range, NodeStyle style = NodeStyle.Default) { return new StdSimpleCallNodeWithAttrs(attrs, name, args, range, style); }
 		public static CallNode Call(VList<LNode> attrs, LNode target, VList<LNode> args, SourceRange range, NodeStyle style = NodeStyle.Default) { return new StdComplexCallNodeWithAttrs(attrs, target, args, range, style); }
 		public static CallNode Trivia(Symbol name, object value, SourceRange range, NodeStyle style = NodeStyle.Default) { return new StdTriviaNode(name, value, range, style); }
-		public static LNode InParens(LNode node, SourceRange range) { return node.PlusAttr(Id(CodeSymbols.TriviaInParens, range)); }
 
-		public static IdNode Id(Symbol name, ISourceFile file = null, int position = -1, int width = -1) { return new StdIdNode(name, new SourceRange(file, position, width)); }
-		public static IdNode Id(string name, ISourceFile file = null, int position = -1, int width = -1) { return new StdIdNode(GSymbol.Get(name), new SourceRange(file, position, width)); }
-		public static IdNode Id(VList<LNode> attrs, Symbol name, ISourceFile file = null, int position = -1, int width = -1) { return new StdIdNodeWithAttrs(attrs, name, new SourceRange(file, position, width)); }
-		public static IdNode Id(VList<LNode> attrs, string name, ISourceFile file = null, int position = -1, int width = -1) { return new StdIdNodeWithAttrs(attrs, GSymbol.Get(name), new SourceRange(file, position, width)); }
-		public static LiteralNode Literal(object value, ISourceFile file = null, int position = -1, int width = -1, NodeStyle style = NodeStyle.Default) { return new StdLiteralNode(value, new SourceRange(file, position, width), style); }
-		public static LiteralNode Literal(VList<LNode> attrs, object value, ISourceFile file = null, int position = -1, int width = -1, NodeStyle style = NodeStyle.Default) { return new StdLiteralNode(value, new SourceRange(file, position, width), style); }
-		public static CallNode Call(Symbol name, ISourceFile file = null, int position = -1, int width = -1, NodeStyle style = NodeStyle.Default) { return new StdSimpleCallNode(name, VList<LNode>.Empty, new SourceRange(file, position, width), style); }
-		public static CallNode Call(LNode target, ISourceFile file = null, int position = -1, int width = -1, NodeStyle style = NodeStyle.Default) { return new StdComplexCallNode(target, VList<LNode>.Empty, new SourceRange(file, position, width), style); }
-		public static CallNode Call(Symbol name, VList<LNode> args, ISourceFile file = null, int position = -1, int width = -1, NodeStyle style = NodeStyle.Default) { return new StdSimpleCallNode(name, args, new SourceRange(file, position, width), style); }
-		public static CallNode Call(LNode target, VList<LNode> args, ISourceFile file = null, int position = -1, int width = -1, NodeStyle style = NodeStyle.Default) { return new StdComplexCallNode(target, args, new SourceRange(file, position, width), style); }
-		public static CallNode Call(VList<LNode> attrs, Symbol name, VList<LNode> args, ISourceFile file = null, int position = -1, int width = -1, NodeStyle style = NodeStyle.Default) { return new StdSimpleCallNodeWithAttrs(attrs, name, args, new SourceRange(file, position, width), style); }
-		public static CallNode Call(VList<LNode> attrs, LNode target, VList<LNode> args, ISourceFile file = null, int position = -1, int width = -1, NodeStyle style = NodeStyle.Default) { return new StdComplexCallNodeWithAttrs(attrs, target, args, new SourceRange(file, position, width), style); }
-		public static CallNode Trivia(Symbol name, object value, ISourceFile file = null, int position = -1, int width = -1, NodeStyle style = NodeStyle.Default) { return new StdTriviaNode(name, value, new SourceRange(file, position, width), style); }
-		
-		public static LNode InParens(LNode node, ISourceFile file = null, int position = -1, int width = -1) { return node.PlusAttr(Id(CodeSymbols.TriviaInParens, file, position, width)); }
+		public static IdNode Id(Symbol name, ISourceFile file = null) { return new StdIdNode(name, new SourceRange(file)); }
+		public static IdNode Id(string name, ISourceFile file = null) { return new StdIdNode(GSymbol.Get(name), new SourceRange(file)); }
+		public static IdNode Id(VList<LNode> attrs, Symbol name, ISourceFile file = null) { return new StdIdNodeWithAttrs(attrs, name, new SourceRange(file)); }
+		public static IdNode Id(VList<LNode> attrs, string name, ISourceFile file = null) { return new StdIdNodeWithAttrs(attrs, GSymbol.Get(name), new SourceRange(file)); }
+		public static LiteralNode Literal(object value, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdLiteralNode(value, new SourceRange(file), style); }
+		public static LiteralNode Literal(VList<LNode> attrs, object value, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdLiteralNode(value, new SourceRange(file), style); }
+		public static CallNode Call(Symbol name, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdSimpleCallNode(name, VList<LNode>.Empty, new SourceRange(file), style); }
+		public static CallNode Call(LNode target, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdComplexCallNode(target, VList<LNode>.Empty, new SourceRange(file), style); }
+		public static CallNode Call(Symbol name, VList<LNode> args, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdSimpleCallNode(name, args, new SourceRange(file), style); }
+		public static CallNode Call(LNode target, VList<LNode> args, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdComplexCallNode(target, args, new SourceRange(file), style); }
+		public static CallNode Call(VList<LNode> attrs, Symbol name, VList<LNode> args, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdSimpleCallNodeWithAttrs(attrs, name, args, new SourceRange(file), style); }
+		public static CallNode Call(VList<LNode> attrs, LNode target, VList<LNode> args, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdComplexCallNodeWithAttrs(attrs, target, args, new SourceRange(file), style); }
+		public static CallNode Trivia(Symbol name, object value, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdTriviaNode(name, value, new SourceRange(file), style); }
+
+		/// <summary>Used by the <c>quote {...}</c> macro.</summary>
 		public static readonly LNode InParensTrivia = Id(CodeSymbols.TriviaInParens);
 
 		// List creation with null check (even in release builds)
@@ -576,7 +339,7 @@ namespace Loyc.Syntax
 			int i = 0;
 			foreach (var n in list.ToFVList()) { // FVList enumerate faster
 				i++;
-				if (n == null) throw new ArgumentNullException("list[" + (list.Count-i) + "]");
+				if (n == null) throw new ArgumentNullException("list[" + (list.Count - i) + "]");
 			}
 			return list;
 		}
@@ -592,7 +355,7 @@ namespace Loyc.Syntax
 			foreach (var n in list.ToFVList()) { // FVList enumerate faster
 				i++;
 				if (n == null) throw new ArgumentNullException(propName,
-					string.Format("Attempted to construct an LNode with a null reference at {0}[{1}].", propName, list.Count-i));
+					string.Format("Attempted to construct an LNode with a null reference at {0}[{1}].", propName, list.Count - i));
 			}
 		}
 
@@ -621,23 +384,18 @@ namespace Loyc.Syntax
 			public int StartIndex;
 			private int _stuff;
 
-			const int StyleShift = 23;
-			const int NonWidthBits = 32 - StyleShift;
+			const int StyleShift = 24;
 			const int LengthMask = (1 << StyleShift) - 1;
-			const int MutableFlag = unchecked((int)0x80000000);
 
-			public int Length { 
-				[DebuggerStepThrough] get { return _stuff & LengthMask; }
-				[DebuggerStepThrough] set { _stuff = (_stuff & ~LengthMask) | value; }
+			public int Length {
+				[DebuggerStepThrough] get { return _stuff << 8 >> 8; }
+				[DebuggerStepThrough] set { _stuff = (_stuff & ~LengthMask) | (value & LengthMask); }
 			}
 			public int EndIndex { get { return StartIndex + Length; } }
 			public NodeStyle Style {
 				[DebuggerStepThrough] get { return (NodeStyle)(_stuff >> StyleShift); }
 				[DebuggerStepThrough] set { _stuff = (_stuff & ~(0xFF << StyleShift)) | ((int)value << StyleShift); }
 			}
-			public bool IsMutable { get { return (_stuff & MutableFlag) != 0; } }
-			public void MarkFrozen() { _stuff &= ~MutableFlag; }
-			public void MarkMutable() { _stuff |= MutableFlag; }
 
 			public static explicit operator SourceRange(RangeAndStyle ras) { return new SourceRange(ras.Source, ras.StartIndex, ras.Length); }
 		}
@@ -663,11 +421,11 @@ namespace Loyc.Syntax
 		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 		public ISourceFile Source { get { return RAS.Source; } }
 
-		/// <summary>Gets Range.Begin.ToString().</summary>
+		/// <summary>Returns Range.</summary>
 		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 		object IHasLocation.Location
 		{
-			get { return Range.Start; }
+			get { return Range; }
 		}
 
 		/// <summary>Indicates the preferred style to use when printing the node to a text string.</summary>
@@ -691,7 +449,7 @@ namespace Loyc.Syntax
 			get { return RAS.Style & NodeStyle.BaseStyleMask; }
 			set { Style = (RAS.Style & ~NodeStyle.BaseStyleMask) | (value & NodeStyle.BaseStyleMask); }
 		}
-		
+
 		public LNode SetBaseStyle(NodeStyle s)
 		{
 			BaseStyle = s;
@@ -711,7 +469,7 @@ namespace Loyc.Syntax
 		/// <remarks>Debugger-hidden until such time as mutable nodes actually exist.</remarks>
 		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
 		public virtual bool IsFrozen { get { return true; } }
-		
+
 		/// <summary>Returns the <see cref="LNodeKind"/>: Symbol, Literal, or Call.</summary>
 		public abstract LNodeKind Kind { get; }
 		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
@@ -742,10 +500,26 @@ namespace Loyc.Syntax
 		/// </remarks>
 		public abstract Symbol Name { get; }
 
-		/// <summary>Returns true if <see cref="Name"/> starts with '#'.</summary>
+		/// <summary>Returns true if <see cref="Name"/> is a "special" name 
+		/// (i.e. starts with '#' or '\'' or '.' or any character below 48 in ASCII).</summary>
 		/// <remarks>Note that this property returns false for the empty identifier <c>@``</c>.</remarks>
 		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-		public bool HasSpecialName { get { string n = Name.Name; return n.Length > 0 && n[0] == '#'; } }
+		public bool HasSpecialName { get { return IsSpecialName(Name.Name); } }
+
+		/// <summary>Returns true if <c>name</c> is considered a "special" name that
+		/// starts with any character below 48 in ASCII, such as '#', '\'', and '.'.</summary>
+		/// <remarks>
+		/// This returns false for the empty string or null. 
+		/// <para/>
+		/// In order to keep the check trivially simple, this returns true for '$'
+		/// even though it is <i>not</i> special in some languages (e.g. JavaScript).
+		/// <para/>
+		/// Letters, underscores, digits, and some punctuation do not count as special.
+		/// The full list of specials is <c>! " # $ % &amp; ' ( ) * + , - . /</c> plus
+		/// the space character and the control characters.
+		/// </remarks>
+		public static bool IsSpecialName(string name) { return name != null && name.Length > 0 && name[0] < '0'; }
+		public static bool IsSpecialName(Symbol name) { return name != null && name.Name.Length > 0 && name.Name[0] < '0'; }
 
 		/// <summary>Creates a node with a new value for Name.</summary>
 		/// <remarks>If IsId, the Name is simply changed. If <see cref="IsCall"/>, 
@@ -776,7 +550,7 @@ namespace Loyc.Syntax
 		/// <summary>Creates a new literal node with a different Value than the current literal node.</summary>
 		/// <exception cref="InvalidOperationException">The node was not a literal already.</exception>
 		public abstract LiteralNode WithValue(object value);
-		
+
 		#endregion
 
 		#region Properties and methods for Call nodes
@@ -796,9 +570,9 @@ namespace Loyc.Syntax
 		/// </remarks>
 		public abstract VList<LNode> Args { get; }
 
-		public virtual CallNode WithTarget(LNode target)                { return With(target, Args); }
-		public virtual CallNode WithTarget(Symbol name)                 { return With(name, Args); }
-		
+		public virtual CallNode WithTarget(LNode target) { return With(target, Args); }
+		public virtual CallNode WithTarget(Symbol name) { return With(name, Args); }
+
 		/// <summary>Creates a Node with a new argument list. If this node is not a 
 		/// call, a new node is created using this node as its target. Otherwise,
 		/// the existing argument list is replaced.</summary>
@@ -822,7 +596,7 @@ namespace Loyc.Syntax
 			else
 				return new StdComplexCallNodeWithAttrs(attrs, target, args, this);
 		}
-		
+
 		/// <summary>Creates a <see cref="CallNode"/> with the same attributes and 
 		/// <see cref="Range"/>, but a different target and argument list. If the 
 		/// current node is not a CallNode, it becomes one (the Range, Style and 
@@ -846,15 +620,15 @@ namespace Loyc.Syntax
 		/// is little reason for an end-user to call this, but Clone() is used 
 		/// internally as a helper method by the WithXyz() methods.</summary>
 		public abstract LNode Clone();
-		
+
 		public LNode WithRange(SourceRange range) { return With(range, Style); }
-		public LNode WithRange(int startIndex, int endIndex)
+		public virtual LNode WithRange(int startIndex, int endIndex)
 		{
 			var copy = Clone();
-			copy.RAS = new RangeAndStyle(RAS.Source, startIndex, endIndex-startIndex, RAS.Style);
+			copy.RAS = new RangeAndStyle(RAS.Source, startIndex, endIndex - startIndex, RAS.Style);
 			return copy;
 		}
-		public LNode WithStyle(NodeStyle style)   { return With(Range, style); }
+		public LNode WithStyle(NodeStyle style) { return With(Range, style); }
 		public virtual LNode With(SourceRange range, NodeStyle style)
 		{
 			var copy = Clone();
@@ -864,18 +638,21 @@ namespace Loyc.Syntax
 
 		public virtual LNode WithoutAttrs() { return WithAttrs(VList<LNode>.Empty); }
 		public abstract LNode WithAttrs(VList<LNode> attrs);
-		
+
 		public LNode WithAttrs(params LNode[] attrs) { return WithAttrs(new VList<LNode>(attrs)); }
 		public CallNode WithArgs(params LNode[] args) { return WithArgs(new VList<LNode>(args)); }
 		public LNode PlusAttr(LNode attr) { return WithAttrs(Attrs.Add(attr)); }
-		public LNode PlusAttrs(VList<LNode> attrs) { return attrs.IsEmpty ? this : WithAttrs(Attrs.AddRange(attrs)); }
 		public LNode PlusAttrs(IEnumerable<LNode> attrs) { return WithAttrs(Attrs.AddRange(attrs)); }
 		public LNode PlusAttrs(params LNode[] attrs) { return WithAttrs(Attrs.AddRange(attrs)); }
+		public LNode PlusAttrs(VList<LNode> attrs) { return attrs.IsEmpty ? this : WithAttrs(Attrs.AddRange(attrs)); }
+		public LNode PlusAttrsBefore(VList<LNode> attrs) { return attrs.IsEmpty ? this : WithAttrs(attrs.AddRange(Attrs)); }
+		public LNode PlusAttrsBefore(params LNode[] attrs) { return WithAttrs(Attrs.InsertRange(0, attrs)); }
+		public LNode PlusAttrBefore(LNode attr) { return WithAttrs(Attrs.Insert(0, attr)); }
 		public LNode PlusArg(LNode arg) { return WithArgs(Args.Add(arg)); }
 		public LNode PlusArgs(VList<LNode> args) { return args.IsEmpty ? this : WithArgs(Args.AddRange(args)); }
 		public LNode PlusArgs(IEnumerable<LNode> args) { return WithArgs(Args.AddRange(args)); }
 		public LNode PlusArgs(params LNode[] args) { return WithArgs(Args.AddRange(args)); }
-		public LNode WithArgChanged(int index, Func<LNode,LNode> selector)
+		public LNode WithArgChanged(int index, Func<LNode, LNode> selector)
 		{
 			var args = Args;
 			var arg = args[index];
@@ -907,6 +684,16 @@ namespace Loyc.Syntax
 			} else
 				return this;
 		}
+		public LNode WithChildChanged(int index, LNode newValue)
+		{
+			if (index >= 0) {
+				return WithArgChanged(index, newValue);
+			} else if (index < -1) {
+				return WithAttrChanged(index + 1 + AttrCount, newValue);
+			} else { // index == -1
+				return WithTarget(newValue);
+			}
+		}
 
 		#endregion
 
@@ -915,19 +702,19 @@ namespace Loyc.Syntax
 
 		#region Node printer service (used by ToString())
 
-		static LNodePrinter _defaultPrinter = Loyc.Syntax.Les.LesNodePrinter.Printer;
-		static ThreadLocalVariable<LNodePrinter> _printer = new ThreadLocalVariable<LNodePrinter>();
+		static ILNodePrinter _defaultPrinter = Loyc.Syntax.Les.Les2LanguageService.Value;
+		static ThreadLocalVariable<ILNodePrinter> _printer = new ThreadLocalVariable<ILNodePrinter>();
 
 		/// <summary>Gets or sets the default node printer on the current thread,
 		/// which controls how nodes are serialized to text by default.</summary>
 		/// <remarks>The LES printer is the default, and will be used if you try
 		/// to set this property to null.</remarks>
-		public static LNodePrinter Printer
+		public static ILNodePrinter Printer
 		{
 			get { return _printer.Value ?? _defaultPrinter; }
 			set { _printer.Value = value; }
 		}
-		
+
 		/// <summary>Helps you change printers temporarily. Usage in C#: 
 		/// <c>using (LNode.PushPrinter(myPrinter)) { ... }</c></summary>
 		/// <remarks>For example, to switch to the EC# printer, use
@@ -939,20 +726,18 @@ namespace Loyc.Syntax
 		///     EcsNodePrinter.Printer(node, sb, MessageSink.Trace);
 		/// </code>
 		/// </remarks>
-		public static PushedPrinter PushPrinter(LNodePrinter printer) { return new PushedPrinter(printer); }
-		/// <summary>Returned by <see cref="PushPrinter(LNodePrinter)"/>.</summary>
+		public static PushedPrinter PushPrinter(ILNodePrinter printer) { return new PushedPrinter(printer); }
+		/// <summary>Returned by <see cref="PushPrinter(ILNodePrinter)"/>.</summary>
 		public struct PushedPrinter : IDisposable
 		{
-			LNodePrinter old;
-			public PushedPrinter(LNodePrinter @new) { old = Printer; Printer = @new; }
+			ILNodePrinter old;
+			public PushedPrinter(ILNodePrinter @new) { old = Printer; Printer = @new; }
 			public void Dispose() { Printer = old; }
 		}
 
-		public virtual string Print(object mode = null, string indentString = "\t", string lineSeparator = "\n")
+		public virtual string Print(ParsingMode mode = null, ILNodePrinterOptions options = null)
 		{
-			StringBuilder sb = new StringBuilder();
-			Printer(this, sb, MessageSink.Null, mode, indentString, lineSeparator);
-			return sb.ToString();
+			return Printer.Print(this, MessageSink.Null, mode, options);
 		}
 
 		#endregion
@@ -988,45 +773,89 @@ namespace Loyc.Syntax
 				return NoValue.Value;
 			}
 		}
-		[DebuggerBrowsable(DebuggerBrowsableState.Never)]
-		public bool HasTokenValue { get { return TriviaValue != NoValue.Value; } }
 
 		public override string ToString()
 		{
 			return Print();
 		}
 
-		/// <inheritdoc cref="Equals(LNode, bool)"/>
-		public static bool Equals(LNode a, LNode b, bool compareStyles = false)
-		{
-			if (a == b)
-				return true;
-			if (a == null)
-				return false;
-			return a.Equals(b, compareStyles);
-		}
 		/// <summary>Compares two lists of nodes for structural equality.</summary>
-		/// <param name="compareStyles">Whether to compare values of <see cref="Style"/></param>
+		/// <param name="mode">Whether to pay attention to <see cref="Style"/> and trivia attributes</param>
 		/// <remarks>Position information is not compared.</remarks>
-		public static bool Equals(VList<LNode> a, VList<LNode> b, bool compareStyles = false)
+		public static bool Equals(VList<LNode> a, VList<LNode> b, CompareMode mode = CompareMode.Normal)
 		{
 			if (a.Count != b.Count)
 				return false;
 			while (!a.IsEmpty)
-				if (!Equals(a.Pop(), b.Pop()))
+				if (!Equals(a.Pop(), b.Pop(), mode))
+					return false;
+			return true;
+		}
+		
+		/// <inheritdoc cref="Equals(ILNode, CompareMode)"/>
+		public static bool Equals(ILNode a, ILNode b, CompareMode mode = CompareMode.Normal)
+		{
+			if ((object)a == b)
+				return true;
+			if (a == null || b == null)
+				return false;
+			int max = a.Max, min;
+			if (max != b.Max)
+				return false;
+			var kind = a.Kind;
+			if (kind != b.Kind)
+				return false;
+			if ((mode & CompareMode.Styles) != 0 && a.Style != b.Style)
+				return false;
+			if (a.Name != b.Name)
+				return false;
+			if (kind == LNodeKind.Literal && !object.Equals(a.Value, b.Value))
+				return false;
+			if ((mode & CompareMode.IgnoreTrivia) != 0) {
+				// TODO: unit test this
+				int ia, ib;
+				for (ia = a.Min, ib = b.Min; ia < -1 && ib < -1; ia++)
+				{
+					var attr_a = a[ia];
+					if (!attr_a.IsTrivia()) {
+						do {
+							var attr_b = b[ib];
+							ib++;
+							if (!attr_b.IsTrivia()) {
+								if (Equals(attr_a, attr_b, mode))
+									break;
+								else
+									return false;
+							}
+						} while (ib < -1);
+					}
+				}
+				while (ib < -1 && b[ib].IsTrivia())
+					ib++;
+				if (ia != ib)
+					return false;
+				min = -1;
+			} else if ((min = a.Min) != b.Min)
+				return false;
+
+			for (int i = min; i <= max; i++)
+				if (!Equals(a[i], b[i], mode))
 					return false;
 			return true;
 		}
 
-		/// <summary>Compares two nodes for structural equality. Two green nodes 
-		/// are considered equal if they have the same name, the same value, the
-		/// same arguments, and the same attributes. IsCall must be the same, but
-		/// they need not have the same values of SourceWidth or IsFrozen.</summary>
-		/// <param name="compareStyles">Whether to compare values of <see cref="Style"/></param>
+		[Flags]
+		public enum CompareMode { Normal = 0, Styles = 1, IgnoreTrivia = 2 }
+
+		/// <summary>Compares two nodes for structural equality. Two nodes are 
+		/// considered equal if they have the same kind, the same name, the same 
+		/// value, the same arguments, and the same attributes.</summary>
+		/// <param name="mode">Whether to pay attention to <see cref="Style"/> and trivia attributes</param>
 		/// <remarks>Position information (<see cref="Range"/>) is not compared.</remarks>
-		public abstract bool Equals(LNode other, bool compareStyles);
-		public bool Equals(LNode other) { return Equals(other, false); }
-		public override bool Equals(object other) { var b = other as LNode; return Equals(b, false); }
+		public virtual bool Equals(ILNode other, CompareMode mode) { return Equals(this, other, mode); }
+		public bool Equals(LNode other) { return Equals(this, other); }
+		public bool Equals(ILNode other) { return Equals(this, other); }
+		public override bool Equals(object other) { var b = other as LNode; return Equals(this, b); }
 		protected internal abstract int GetHashCode(int recurse, int styleMask);
 		/// <summary>Gets the hash code based on the structure of the tree.</summary>
 		/// <remarks>
@@ -1035,31 +864,6 @@ namespace Loyc.Syntax
 		/// but usually it is less than 100).
 		/// </remarks>
 		public override int GetHashCode() { return GetHashCode(3, 0); }
-
-		/// <summary>An IEqualityComparer that compares nodes structurally.</summary>
-		public class DeepComparer : IEqualityComparer<LNode>
-		{
-			public static readonly DeepComparer Value = new DeepComparer(false);
-			public static readonly DeepComparer WithStyleCompare = new DeepComparer(true);
-
-			bool _compareStyles;
-			public DeepComparer(bool compareStyles) { _compareStyles = compareStyles; }
-
-			public bool Equals(LNode x, LNode y)
-			{
-				return LNode.Equals(x, y, _compareStyles);
-			}
-			public int GetHashCode(LNode node)
-			{
-				return node.GetHashCode(3, _compareStyles ? 0xFF : 0);
-			}
-		}
-
-		protected internal void ThrowIfFrozen()
-		{
-			if (IsFrozen)
-				throw new ReadOnlyException(string.Format("The node '{0}' is frozen against modification.", ToString()));
-		}
 
 		[DebuggerBrowsable(DebuggerBrowsableState.Never)] public int ArgCount { get { return Args.Count; } }
 		[DebuggerBrowsable(DebuggerBrowsableState.Never)] public int AttrCount { get { return Attrs.Count; } }
@@ -1108,10 +912,6 @@ namespace Loyc.Syntax
 		public virtual bool IsIdWithoutPAttrs(Symbol name)         { Debug.Assert(!IsId); return false; }
 		public virtual bool IsIdNamed(Symbol name)                 { Debug.Assert(!IsId); return false; }
 		public virtual bool IsIdNamed(string name)                 { Debug.Assert(!IsId); return false; }
-		public virtual bool IsParenthesizedExpr()
-		{
-			return this.AttrNamed(CodeSymbols.TriviaInParens) != null;
-		}
 
 		/// <summary>Some <see cref="CallNode"/>s are used to represent lists. This 
 		/// method merges two nodes, forming or appending a list (see remarks).</summary>
@@ -1256,13 +1056,37 @@ namespace Loyc.Syntax
 
 		#endregion
 
+		#region Explicit interface implementations (INegListSource<ILNode>)
+
+		ILNode INegListSource<ILNode>.this[int index] { get { return this[index]; } }
+		ILNode INegListSource<ILNode>.TryGet(int index, out bool fail) { return TryGet(index, out fail); }
+		#if DotNet3
+		IEnumerator<ILNode> IEnumerable<ILNode>.GetEnumerator()
+		{
+			for (int i = Min; i <= Max; i++)
+				yield return this[i];
+		}
+		#else
+		IEnumerator<ILNode> IEnumerable<ILNode>.GetEnumerator() { return GetEnumerator(); }
+		#endif
+		IRange<ILNode> INegListSource<ILNode>.Slice(int start, int count)
+		{
+			return new NegListSlice<ILNode>(this, start, count);
+		}
+
+		LNode IToLNode.ToLNode() { return this; }
+
+		#endregion
+
 		/// <summary>Transforms the <see cref="Target"/>, parameters, and optionally
 		/// the attributes of an LNode, returning another LNode of the same Kind. If 
 		/// the selector makes no changes, Select() returns <c>this</c>.</summary>
 		/// <remarks>The selector is not allowed to return null, but it can return
-		/// <c>NoValue.Value</c> to delete a parameter or target. If you're wondering 
-		/// why we don't use <c>null</c> for this purpose, it is because the 
-		/// functionality of this method is actually implemented by 
+		/// <c>NoValue.Value</c> to delete a parameter or target. If the current 
+		/// node is a target, it cannot be deleted, so it is replaced with 
+		/// <c>#splice()</c> which, by convention, represents an empty list.
+		/// If you're wondering why we don't use <c>null</c> for deletions, it is 
+		/// because the functionality of this method is actually implemented by 
 		/// <see cref="VList{T}.WhereSelect(Func{T, Maybe{T}})"/>; since T could be a 
 		/// value type, that method cannot use null as a signal to delete items from 
 		/// the collection.
@@ -1295,12 +1119,16 @@ namespace Loyc.Syntax
 		/// <see cref="Args"/>) using the specified selector. This method can also
 		/// be used for simple searching, by giving a selector that always returns 
 		/// null.</summary>
-		/// <param name="selector">The selector is called for each descendant, and
+		/// <param name="matcher">This method is called for each descendant, and
 		/// optionally the root node. If the selector returns a node, the new node 
 		/// replaces the node that was passed to <c>selector</c> and the children of 
 		/// the new node are ignored. If the selector returns null, children of the 
-		/// child are scanned recursively.</param>
-		/// <param name="replaceRoot">Whether to call <c>selector(this)</c>.</param>
+		/// child are scanned recursively. If the selector returns Maybe{LNode}.NoValue
+		/// then the current node is deleted if it is an argument or attribute. If 
+		/// the current node is a target, it cannot be deleted, so it is replaced 
+		/// with <c>#splice()</c> which, by convention, represents an empty list.
+		/// If you delete the root node then this method returns Maybe{LNode}.NoValue.</param>
+		/// <param name="options">Options, see <see cref="ReplaceOpt"/>.</param>
 		/// <returns>The new node produced after all replacements have occurred.</returns>
 		/// <remarks>If <c>replaceFunc</c> always returns null (or if <c>replaceRoot</c>
 		/// is false and the root has no children), <c>ReplaceRecursive</c> returns 
