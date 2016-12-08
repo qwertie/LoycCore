@@ -1,7 +1,8 @@
 ---
-title: Pervasive Services and the Ambient Service Pattern
+title: Dependency Injection and the Ambient Service Pattern
 layout: article
 toc: true
+date: 8 Dec 2016
 ---
 
 Dependency Injection (also called Inversion of Control) is an important technique to decouple classes and larger components of an application from each other. If you write a class `C` using Dependency Injection (DI), then `C` doesn't choose its own dependencies, and some other part of the program can do so on its behalf. This makes it possible to swap out a service that `C` needs for some other service without changing `C` itself, which may allow `C` to be used in new situations that had never been imagined when `C` was written.
@@ -32,7 +33,7 @@ Often, in an app designed with DI, all the different components are wired togeth
 
 However, these basic forms of dependency injection become cumbersome when many classes need many different services at once. If a class uses 10 distinct services, it is annoying to write that big constructor and to provide all needed services as constructor parameters. Sometimes, when several services are somehow related to each other, you could bundle them together into bigger services:
 
-~~~
+~~~csharp
 interface ICar {
     IEngine       Engine       { get; }
     ITransmission Transmission { get; } 
@@ -163,10 +164,10 @@ Normally, the Ambient Service Pattern is implemented with thread-local variables
 
 Unfortunately, when you create a new thread (or `Task` or `BackgroundWorker`), **the CLR prohibits you from propagating thread-local data from the parent thread to the child thread**. In Loyc.Essentials I actually implemented a whole infrastructure to work around this problem. This involved [`ThreadEx`](http://ecsharp.net/doc/code/classLoyc_1_1Threading_1_1ThreadEx.html), a wrapper around `Thread`, and [`ThreadLocalVariable<T>`](http://ecsharp.net/doc/code/classLoyc_1_1Threading_1_1ThreadLocalVariable.html), an alternative to `ThreadLocal<T>` that works hand-in-hand with `ThreadEx` to propagate values from parent threads to child threads. This approach had a couple of problems, though:
 
-1. Nowadays most people don't create threads using `Thread`; they use `Task<T>` or `BackgroundWorker`. There is no way to force `Task<T>` and `BackgroundWorker` to use `ThreadEx` instead of `Thread`. `ThreadEx.PropagateVariables` can be used as a workaround, but it's a bit tricky to use correctly.
+1. Nowadays most people don't create threads using `Thread`; they use `Task<T>` or `BackgroundWorker`. There is no way to force `Task<T>` and `BackgroundWorker` to use `ThreadEx` instead of `Thread`. Sometimes `ThreadEx.PropagateVariables` can be used as a workaround, but it takes some effort to use correctly.
 2. Theoretically, the state of an async task is somehow affiliated with [`ExecutionContext`](https://msdn.microsoft.com/en-us/library/system.threading.executioncontext(v=vs.110).aspx), not with threads, and tasks can (theoretically, but I don't know when or why) migrate between threads. Sadly, `ExecutionContext` does not capture thread-local variables and does not support any user-defined data, so if a task jumps between threads there is no way to take thread-local variables along for the ride.
 
-Due to these crippling limitations of the CLR, the Ambient Service Pattern works poorly in C# programs that juggle a lot of threads.
+Due to this serious limitation of the CLR/BCL, the Ambient Service Pattern works poorly in C# programs that juggle a lot of threads. Please [vote for Microsoft to fix this issue](https://visualstudio.uservoice.com/forums/121579-visual-studio-ide/suggestions/17356351-thread-local-variable-inheritance-or-executioncont).
 
 ### Summary ###
 
@@ -177,6 +178,22 @@ In summary, the Ambient Service Pattern is a useful way to with services that ar
 - You don't want to clutter up your components with an excessive number of constructor parameters, and you judge it better to hard-code certain services rather than suffer from the extra effort you would need to thread those services through all the constructors in your program. Don't do that; use Ambient Service Pattern instead. **Note**: if .NET's lack of thread-local variable propagation will be a problem, consider using ordinary global variables instead. If you're using Loyc.Essentials, you can use `Holder<T>` and `SavedValue<T>` in place of `ThreadLocal<T>` and `SavedThreadLocal<T>`.
 
 The Ambient Service Pattern is meant only for widely used background services. Ordinary dependency injection (such as constructor injection) should still be used in most cases.
+
+### Ambient Service Pattern in Loyc libraries ###
+
+Several Loyc components use the pattern.
+
+**Loyc.Essentials.dll:**
+
+- Internationalization: `Localize.Localizer` and `Localize.SetLocalizer`
+- Internationalization formatting: `Localize.Formatter` and `Localize.SetFormatter`
+- Logging (`IMessageSink`): `MessageSink.Default` and `MessageSink.SetDefault`
+
+**Loyc.Syntax.dll:**
+
+- `IParsingService`: `ParsingService.Default` and `ParsingService.SetDefault`
+- `ILNodePrinter`: `LNode.Printer` and `LNode.SetPrinter`
+- `Token`: `Token.ToStringStrategy` and `Token.SetToStringStrategy`
 
 ### P.S. ###
 
