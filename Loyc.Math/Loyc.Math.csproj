@@ -1,12 +1,12 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" ToolsVersion="4.0">
   <PropertyGroup>
-    <ProjectGuid>{DF642FB7-25EB-424D-8E92-6C046F42D4A9}</ProjectGuid>
+    <ProjectGuid>{7493A75D-106A-4A50-9DCF-A7A034629FFF}</ProjectGuid>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <OutputType>Library</OutputType>
-    <RootNamespace>Loyc.Essentials</RootNamespace>
-    <AssemblyName>Loyc.Essentials</AssemblyName>
+    <RootNamespace>Loyc.Math</RootNamespace>
+    <AssemblyName>Loyc.Math</AssemblyName>
     <FileUpgradeFlags>
     </FileUpgradeFlags>
     <UpgradeBackupLocation>
@@ -51,7 +51,7 @@
     <CheckForOverflowUnderflow>False</CheckForOverflowUnderflow>
     <DefineConstants>TRACE;DotNet4,CSharp4</DefineConstants>
     <NoWarn>1591, 1573, 0419</NoWarn>
-    <DocumentationFile>..\Bin\Release.NET4\Loyc.Essentials.xml</DocumentationFile>
+    <DocumentationFile>..\Bin\Release.NET4\Loyc.Math.xml</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <Optimize>true</Optimize>
@@ -62,7 +62,6 @@
   <PropertyGroup Condition=" '$(Platform)' == 'AnyCPU' ">
     <RegisterForComInterop>False</RegisterForComInterop>
     <GenerateSerializationAssemblies>Auto</GenerateSerializationAssemblies>
-    <BaseAddress>4194304</BaseAddress>
     <PlatformTarget>AnyCPU</PlatformTarget>
     <FileAlignment>4096</FileAlignment>
   </PropertyGroup>
@@ -81,7 +80,7 @@
     <NoWarn>1591, 1573</NoWarn>
     <DebugType>Full</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <CodeAnalysisLogFile>..\Bin\Debug.NET4\Loyc.Essentials.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisLogFile>..\Bin\Debug.NET4\Loyc.Math.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
     <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
     <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
@@ -95,13 +94,13 @@
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>..\Bin\Release.NET3\</OutputPath>
     <DefineConstants>TRACE;DotNet3,CSharp4</DefineConstants>
-    <DocumentationFile>..\Bin\Release.NET3\Loyc.Essentials.xml</DocumentationFile>
+    <DocumentationFile>..\Bin\Release.NET3\Loyc.Math.xml</DocumentationFile>
     <Optimize>true</Optimize>
     <FileAlignment>4096</FileAlignment>
     <NoWarn>1591, 1573, 0419</NoWarn>
     <DebugType>pdbonly</DebugType>
     <PlatformTarget>AnyCPU</PlatformTarget>
-    <CodeAnalysisLogFile>..\Bin\Release.NET4\Loyc.Essentials.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
+    <CodeAnalysisLogFile>..\Bin\Release.NET4\Loyc.Math.dll.CodeAnalysisLog.xml</CodeAnalysisLogFile>
     <CodeAnalysisUseTypeNameInSuppression>true</CodeAnalysisUseTypeNameInSuppression>
     <CodeAnalysisModuleSuppressionsFile>GlobalSuppressions.cs</CodeAnalysisModuleSuppressionsFile>
     <CodeAnalysisRuleSet>MinimumRecommendedRules.ruleset</CodeAnalysisRuleSet>
@@ -129,7 +128,7 @@
     <DebugSymbols>true</DebugSymbols>
     <OutputPath>..\Bin\Release.NET45\</OutputPath>
     <DefineConstants>TRACE;DotNet45,CSharp4</DefineConstants>
-    <DocumentationFile>..\Bin\Release.NET4\Loyc.Essentials.xml</DocumentationFile>
+    <DocumentationFile>..\Bin\Release.NET4\Loyc.Math.xml</DocumentationFile>
     <FileAlignment>4096</FileAlignment>
     <NoWarn>1591, 1573, 0419</NoWarn>
     <DebugType>pdbonly</DebugType>
@@ -160,134 +159,71 @@
     <Compile Include="..\AssemblyVersion.cs">
       <Link>Properties\AssemblyVersion.cs</Link>
     </Compile>
-    <Compile Include="Collections\HelperClasses\SelectListSource.out.cs">
+    <Compile Include="Geometry\BoundingBoxMathTT.cs">
+      <DependentUpon>BoundingBoxMathTT.tt</DependentUpon>
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>SelectListSource.ecs</DependentUpon>
     </Compile>
-    <Compile Include="Compatibility\Contract.Assert.cs" />
-    <Compile Include="Compatibility\Enum.cs" />
+    <Compile Include="Geometry\LineMath.cs" />
+    <Compile Include="Geometry\LineMathTT.cs">
+      <DependentUpon>LineMathTT.tt</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <Compile Include="Geometry\PointExt.cs" />
+    <Compile Include="Geometry\PointMath.cs" />
+    <Compile Include="Geometry\PointMathTT.cs">
+      <DependentUpon>PointMathTT.tt</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <Compile Include="Geometry\PolygonMathTT.cs">
+      <DependentUpon>PolygonMathTT.tt</DependentUpon>
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+    </Compile>
+    <Compile Include="Geometry\Rectangle3Ext.cs" />
+    <Compile Include="Geometry\RectangleExt.cs" />
+    <Compile Include="Math\MathEx.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Collections\BaseClasses\BaseDictionary.cs" />
-    <Compile Include="Collections\BaseClasses\EnumeratorBase.cs" />
-    <Compile Include="Collections\BaseClasses\ListExBase.cs" />
-    <Compile Include="Collections\BaseClasses\ListSourceBase.cs" />
-    <Compile Include="Collections\BaseClasses\ReadOnlyCollectionBase.cs" />
-    <Compile Include="Collections\CollectionDebugView.cs" />
-    <Compile Include="Collections\ExtensionMethods\DictionaryExt.cs" />
-    <Compile Include="Collections\ExtensionMethods\EnumerableExt.cs" />
-    <Compile Include="Collections\ExtensionMethods\LCExtensions.cs" />
-    <Compile Include="Collections\ExtensionMethods\LinqToCollections.cs">
+    <Compile Include="Geometry\BoundingBox.cs" />
+    <Compile Include="Geometry\LineSegment.cs" />
+    <Compile Include="Geometry\PointT.cs" />
+    <Compile Include="Geometry\Vector3T.cs" />
+    <Compile Include="Geometry\VectorT.cs" />
+    <Compile Include="Math\FixedPoint.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>LinqToCollections.ecs</DependentUpon>
+      <DependentUpon>FixedPoint.tt</DependentUpon>
     </Compile>
-    <Compile Include="Collections\ExtensionMethods\ListExt.cs" />
-    <Compile Include="Collections\Adapters\ListSourceAsSparse.cs" />
-    <Compile Include="Collections\ExtensionMethods\Range.cs" />
-    <Compile Include="Collections\Adapters\ArraySlice.cs" />
-    <Compile Include="Collections\Adapters\BufferedSequence.cs" />
-    <Compile Include="Collections\Adapters\CollectionAsSource.cs" />
-    <Compile Include="Collections\HelperClasses\EmptyArray.cs" />
-    <Compile Include="Collections\HelperClasses\EmptyEnumerator.cs" />
-    <Compile Include="Collections\HelperClasses\EmptyList.cs" />
-    <Compile Include="Collections\Adapters\KeyCollection.cs" />
-    <Compile Include="Collections\Adapters\ListAsListSource.cs" />
-    <Compile Include="Collections\Adapters\ListSlice.cs" />
-    <Compile Include="Collections\Adapters\ListSourceAsList.cs" />
-    <Compile Include="Collections\Adapters\NegList.cs" />
-    <Compile Include="Collections\Adapters\NegListSource.cs" />
-    <Compile Include="Collections\HelperClasses\NumRange.cs" />
-    <Compile Include="Collections\HelperClasses\RangeEnumerator.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Collections\HelperClasses\Repeated.cs" />
-    <Compile Include="Collections\Adapters\ReverseBinumerator.cs" />
-    <Compile Include="Collections\Adapters\ReversedList.cs" />
-    <Compile Include="Collections\Adapters\ReversedListSource.cs" />
-    <None Include="Collections\HelperClasses\SelectListSource.ecs">
-      <Generator>LeMP</Generator>
-      <LastGenOutput>SelectListSource.out.cs</LastGenOutput>
-    </None>
-    <Compile Include="Collections\Adapters\Slice.cs" />
-    <Compile Include="Collections\Adapters\SourceAsCollection.cs" />
-    <Compile Include="Collections\Adapters\NegListSlice.cs" />
-    <Compile Include="NamespaceDocs.cs" />
-    <Compile Include="Strings\StringBuilderExt.cs" />
-    <Compile Include="Strings\StringSlice.cs" />
-    <Compile Include="Strings\UString.cs" />
-    <Compile Include="Collections\Adapters\ValueCollection.cs" />
-    <Compile Include="Collections\Implementations\DList.cs" />
-    <Compile Include="Collections\Implementations\InternalDList.cs" />
-    <Compile Include="Collections\Implementations\InternalList.cs" />
-    <Compile Include="Collections\Interfaces\ICharSource.cs" />
-    <Compile Include="Collections\Interfaces\ISparseList.cs" />
-    <Compile Include="Collections\Interfaces\New enumerators.cs" />
-    <Compile Include="Collections\Interfaces\IRanges.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Collections\Interfaces\ISetImm.cs">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="Collections\Implementations\ListChangeInfo.cs" />
-    <Compile Include="Collections\Implementations\WeakKeyComparer.cs" />
-    <Compile Include="Collections\Implementations\WeakKeyDictionary.cs" />
-    <Compile Include="Collections\Implementations\WeakValueDictionary.cs" />
-    <Compile Include="Collections\Interfaces\ICount.cs" />
-    <Compile Include="Collections\Interfaces\IListSource.cs" />
-    <Compile Include="Collections\Interfaces\INegListSource.cs" />
-    <Compile Include="Collections\Interfaces\IAutoCreatePool.cs" />
-    <Compile Include="Collections\Interfaces\INotifyListChanging.cs" />
-    <Compile Include="Collections\Interfaces\Queue interfaces.cs" />
-    <Compile Include="Collections\Interfaces\Read-write interfaces.cs" />
-    <Compile Include="Collections\Interfaces\Sink interfaces.cs" />
-    <Compile Include="Compatibility\IReadOnlyCollections.cs" />
-    <Compile Include="Compatibility\Serializable.cs" />
-    <Compile Include="Utilities\Exceptions.cs" />
-    <Compile Include="Utilities\G.cs" />
-    <Compile Include="Geometry\IPoint.cs" />
-    <Compile Include="Geometry\IPoint3.cs" />
-    <Compile Include="Geometry\IRectangle.cs" />
-    <Compile Include="Geometry\IRectangle3.cs" />
-    <Compile Include="Utilities\EzStopwatch.cs" />
-    <Compile Include="Math\Interfaces.cs" />
-    <Compile Include="Utilities\Extensions.cs" />
-    <None Include="Utilities\GRange.ecs">
-      <Generator>LeMP</Generator>
-      <LastGenOutput>GRange.out.cs</LastGenOutput>
-    </None>
-    <Compile Include="Utilities\GRange.out.cs">
+    <Compile Include="Math\Math128.cs" />
+    <Compile Include="Math\MathsT.cs" />
+    <Compile Include="Math\Maths.cs">
       <AutoGen>True</AutoGen>
       <DesignTime>True</DesignTime>
-      <DependentUpon>GRange.ecs</DependentUpon>
+      <DependentUpon>Maths.tt</DependentUpon>
     </Compile>
-    <Compile Include="Utilities\HashTags.cs" />
-    <Compile Include="Utilities\IMessageSink.cs" />
-    <Compile Include="Utilities\Localize.cs" />
-    <Compile Include="Utilities\Maybe.cs" />
-    <Compile Include="Utilities\MemoizedTypeName.cs" />
-    <Compile Include="Utilities\MessageSinks.cs" />
-    <Compile Include="Utilities\MiniTest.cs" />
-    <Compile Include="Utilities\MiscInterfaces.cs" />
-    <Compile Include="Utilities\PrintHelpers.cs" />
-    <Compile Include="Utilities\Pair.cs" />
-    <Compile Include="Utilities\SavedValue.cs" />
-    <Compile Include="Utilities\RunTests.cs" />
-    <Compile Include="Strings\StringExt.cs" />
-    <Compile Include="Utilities\Symbol.cs" />
-    <Compile Include="Utilities\ThreadEx.cs" />
-    <Compile Include="Utilities\ValueComparer.cs" />
-    <Compile Include="Compatibility\WeakReference.cs" />
-    <Compile Include="Utilities\WrapperBase.cs" />
-    <Compile Include="void.cs" />
+    <Compile Include="Range.out.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Range.ecs</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
-    <None Include="app.config" />
-    <None Include="Collections\ExtensionMethods\LinqToCollections.ecs">
-      <Generator>LLLPG</Generator>
-      <LastGenOutput>LinqToCollections.cs</LastGenOutput>
+    <None Include="Math\FixedPoint.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>FixedPoint.cs</LastGenOutput>
     </None>
+    <None Include="Math\Maths.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>Maths.cs</LastGenOutput>
+    </None>
+    <None Include="Math\NumTraits.ttinclude" />
     <None Include="OpenSourceKey.snk" />
+    <None Include="Range.ecs">
+      <Generator>LeMP</Generator>
+      <LastGenOutput>Range.out.cs</LastGenOutput>
+    </None>
   </ItemGroup>
   <ItemGroup>
     <BootstrapperPackage Include="Microsoft.Net.Client.3.5">
@@ -321,8 +257,37 @@
       <Install>true</Install>
     </BootstrapperPackage>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\Loyc.Essentials\Loyc.Essentials.csproj">
+      <Project>{df642fb7-25eb-424d-8e92-6c046f42d4a9}</Project>
+      <Name>Loyc.Essentials</Name>
+    </ProjectReference>
+  </ItemGroup>
   <ItemGroup>
     <Service Include="{508349B6-6B84-4DF5-91F0-309BEEBAD82D}" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Geometry\PolygonMathTT.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PolygonMathTT.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Geometry\BoundingBoxMathTT.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>BoundingBoxMathTT.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Geometry\LineMathTT.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>LineMathTT.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Geometry\PointMathTT.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>PointMathTT.cs</LastGenOutput>
+    </None>
   </ItemGroup>
 </Project>
