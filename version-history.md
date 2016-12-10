@@ -6,6 +6,39 @@ layout: page
 LoycCore and LES
 ----------------
 
+### v2.3.1: December 11, 2016 ###
+
+Loyc.Essentials was split into Loyc.Essentials and Loyc.Math.
+
+Loyc.Syntax and Loyc.Collections reference Loyc.Essentials but not Loyc.Math. Loyc.Math contains
+
+- Most of the math stuff, including `Math128`, `MathEx`, the fixed point types (`FPI8`, `FPI16`, etc.), `Maths<T>`, and the math helper structs (`MathI`, `MathD`, etc.)
+- Most of the geometry stuff, including `BoundingBox<T>`, `LineSegment`, `Point<T>`, and `Vector<T>`
+- `NumRange<Num,Math>`
+
+However, Loyc.Essentials retains most of the math interface definitions.
+
+Some static classes were split between Loyc.Essentials & Loyc.Math:
+
+- `Range` was split. The class `Range` went to Loyc.Math and contains methods that return `NumRange`. The `IsInRange` and `PutInRange` methods went class `G` in `Loyc.Essentials`
+- `MathEx` was split. Most methods remained in `MathEx` which went to Loyc.Math. The methods `Swap` and `SortPair` went to class `G`. While `CountOnes`, `Log2Floor`, `ShiftLeft` and `ShiftRight` are still in `MathEx`, certain overloads are implemented in `G` or duplicated in `G` because they are needed by Loyc.Collections and Loyc.Syntax.
+
+Other changes:
+
+- The rarely-used CPTrie types and KeylessHashtable were moved from Loyc.Collections to Loyc.Utilities
+- Some geometry stuff was moved from Loyc.Utilities to Loyc.Math.
+- The `ParseHelpers` class was split between Loyc.Essentials and Loyc.Syntax, with the conversion-to-string stuff going to `PrintHelpers` in Loyc.Essentials and the conversion-from-string stuff going to `ParseHelpers` in Loyc.Syntax.
+- Certain classes like Localize were changed to follow the Ambient Service Pattern more closely.
+
+### v2.2.0: December 7, 2016 ###
+
+- Tweaked Ambient Service Pattern
+    
+    - Renamed `MessageSink.Current` to `MessageSink.Default`
+    - Introduced `IHasMutableValue<T>`
+    - Renamed `PushedTLV<T>` to `SavedValue<T>`, now operates on `IHasMutableValue<T>`
+    - Removed `G.PushTLV()`
+
 ### v2.1.0: December 3, 2016 ###
 
 - Eliminated `LNodePrinter` delegate, replacing it with `ILNodePrinter`. `LNodePrinter` now holds standard extension methods of `ILNodePrinter`.
