@@ -8,15 +8,15 @@ LoycCore and LES
 
 ### v2.3.1: December 11, 2016 ###
 
-Loyc.Essentials was split into Loyc.Essentials and Loyc.Math.
-
-Loyc.Syntax and Loyc.Collections reference Loyc.Essentials but not Loyc.Math. Loyc.Math contains
+Loyc.Essentials was split into Loyc.Essentials and Loyc.Math. Loyc.Math contains
 
 - Most of the math stuff, including `Math128`, `MathEx`, the fixed point types (`FPI8`, `FPI16`, etc.), `Maths<T>`, and the math helper structs (`MathI`, `MathD`, etc.)
 - Most of the geometry stuff, including `BoundingBox<T>`, `LineSegment`, `Point<T>`, and `Vector<T>`
 - `NumRange<Num,Math>`
 
 However, Loyc.Essentials retains most of the math interface definitions.
+
+Loyc.Syntax and Loyc.Collections reference Loyc.Essentials but not Loyc.Math.
 
 Some static classes were split between Loyc.Essentials & Loyc.Math:
 
@@ -25,7 +25,7 @@ Some static classes were split between Loyc.Essentials & Loyc.Math:
 
 Other changes:
 
-- The rarely-used CPTrie types and KeylessHashtable were moved from Loyc.Collections to Loyc.Utilities
+- The rarely-used `CPTrie` types and `KeylessHashtable` were moved from Loyc.Collections to Loyc.Utilities
 - Some geometry stuff was moved from Loyc.Utilities to Loyc.Math.
 - The `ParseHelpers` class was split between Loyc.Essentials and Loyc.Syntax, with the conversion-to-string stuff going to `PrintHelpers` in Loyc.Essentials and the conversion-from-string stuff going to `ParseHelpers` in Loyc.Syntax.
 - Certain classes like Localize were changed to follow the Ambient Service Pattern more closely.

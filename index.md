@@ -26,13 +26,20 @@ Dependency tree
 Low-level libraries on top:
 
          Loyc.Essentials
-                |
-         Loyc.Collections
-                ^   ^      
-                |   |      
+                ^   ^
+                |   |
                 |   +----------------+
-                |                    |     
                 |                    |
-          Loyc.Utilities        Loyc.Syntax
+         Loyc.Collections        Loyc.Math
+                ^                    ^
+                |                    |
+           Loyc.Syntax               |
+                ^                    |
+                |                    |
+                +---------+----------+
+                          |
+                     Loyc.Utilities
+
+Transitive dependencies are not shown, e.g. Loyc.Utilities actually references all four other DLLs.
 
 Note: the .NET 3.5 versions of these libraries depend on the compatibility library [Theraot.Core.dll](https://github.com/theraot/Theraot).
