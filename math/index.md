@@ -9,12 +9,12 @@ title: Learn about Loyc.Math
 
 ### Notable math types ###
 
-- [MathEx](http://ecsharp.net/doc/code/classLoyc_1_1Math_1_1MathEx.html)
-- [Math128](http://ecsharp.net/doc/code/classLoyc_1_1Math_1_1Math128.html)
-- Fixed-point types: [FPI8](http://ecsharp.net/doc/code/structLoyc_1_1Math_1_1FPI8.html) (`int` with 8 fraction bits), [FPI16](http://ecsharp.net/doc/code/structLoyc_1_1Math_1_1FPI16.html) (`int` with 16 fraction bits) 
-[FPL32](http://ecsharp.net/doc/code/structLoyc_1_1Math_1_1FPI16.html) (`long` with 32 fraction bits)
+- [`MathEx`](http://ecsharp.net/doc/code/classLoyc_1_1Math_1_1MathEx.html)
+- [`Math128`](http://ecsharp.net/doc/code/classLoyc_1_1Math_1_1Math128.html)
+- Fixed-point types: [`FPI8`](http://ecsharp.net/doc/code/structLoyc_1_1Math_1_1FPI8.html) (`int` with 8 fraction bits), [`FPI16`](http://ecsharp.net/doc/code/structLoyc_1_1Math_1_1FPI16.html) (`int` with 16 fraction bits) 
+[`FPL32`](http://ecsharp.net/doc/code/structLoyc_1_1Math_1_1FPI16.html) (`long` with 32 fraction bits)
 - `Maths<T>`, `MathI`, `MathD`, etc.: see ["Arithmetic in generic code"](maths.md)
-- [`Range<T>`](http://ecsharp.net/doc/code/classLoyc_1_1Range.html): supports the EC# range operators `..` and `...`
+- [`Range<T>`](http://ecsharp.net/doc/code/classLoyc_1_1Range.html): supports the EC# range operators `a..b` and `a...b`
 
 ### Notable geometry types ###
 

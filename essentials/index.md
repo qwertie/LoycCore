@@ -19,5 +19,5 @@ title: Learn about Loyc.Essentials
 - TODO: Write about string extension methods
 - TODO: Write about other handy classes in Loyc.Essentials
 - TODO: Write about MiscInterfaces
-- TODO: Review & update/rewrite (article about Symbols](https://www.codeproject.com/Articles/34753/Symbols-as-extensible-enums)
+- TODO: Review & update/rewrite [article about Symbols](https://www.codeproject.com/Articles/34753/Symbols-as-extensible-enums)
 - TODO: Review & update collection interfaces article
