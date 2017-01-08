@@ -27,13 +27,13 @@ Here, `IMath<T>` is a class that has an `Add` method that allows you to add two 
 
 Loyc.Essentials provides a more diverse set of math operations than Rüdiger originally designed. In conjunction with Loyc.Math, which provides the implementation of those interfaces, your generic code can learn everything it might want to know about an unknown numeric type `T` and do any arithmetic it might want to do. In Loyc.Math, `MathI` is the "math provider" structure for `int`, `MathD` is the provider for `double`, `MathL` for `long`, `MathU8` for `byte`, and so on. Math structures for fixed-point and even two-dimensional vectors are available, too.
 
-Unfortunately, for high performance your generic class that does math requires an extra template parameter `M`, and supplying that parameter tends to be a big hassle for your users. Occasionally they can avoid this hassle using `var`; for example, `Range.Inclusive(1, 10)` returns a range of numbers from 1 to 10, represented by `NumRange<int,MathI>`. One can use `var` to avoid writing down the type:
+Unfortunately, for high performance, your generic class that does math requires an extra generic parameter `M`, and supplying that parameter tends to be a big hassle for your users. Occasionally they can avoid this hassle using `var`; for example, `Range.Inclusive(1, 10)` returns a range of numbers from 1 to 10, represented by `NumRange<int,MathI>`. One can use `var` to avoid writing down the type:
 
     var range = Range.Inclusive(1, 10);
     foreach (int num in range)
         Console.WriteLine(num);
 
-Another way to avoid mentioning the math provider is to hold your mathematical object in an interface. For example, `NumRange<int,MathI>` implements `ICollection<int>`, `IReadOnlyList<int>` and `IListSource<int>`. This, however, means that you have to use interface calls to access the object, which might be slow in some circumstances (e.g. if you want to make millions of calls per second). Plus, in the case of `NumRange<int,MathI>`, it is a `struct`, so treating it as an interface like `ICollection<int>` causes boxing.
+Another way to avoid mentioning the math provider is to hold your mathematical object in an interface. For example, `NumRange<int,MathI>` implements `ICollection<int>`, `IReadOnlyList<int>` and `IListSource<int>`. This, however, means that you have to use _interface_ calls to access the object, which might be slow in some circumstances (e.g. if you want to make millions of calls per second). Plus, in the case of `NumRange<int,MathI>`, it is a `struct`, so treating it as an interface like `ICollection<int>` causes boxing.
 
 If your generic class doesn't need to do high-performance arithmetic, then it doesn't need the extra `M` generic parameter when using `Loyc.Math`. Instead it can get an `IMath<T>` object from `Maths<T>`. For example, here's a version of the above code that adds up numbers more slowly, but without the `M` parameter:
 

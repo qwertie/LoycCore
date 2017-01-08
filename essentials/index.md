@@ -5,7 +5,7 @@ title: Learn about Loyc.Essentials
 
 - [Collection interfaces](http://loyc.net/2014/using-loycessentials-collection.html)
 - [Dependency Injection, Pervasive Services and the Ambient Service Pattern](ambient-service-pattern.html)
-- TODO: Write about Linq-to-collections
+- [Linq-to-Collections](linq-to-lists.html)
 - TODO: Write about other collection extension methods
 - TODO: Write about slices 
 - TODO: Write about adapters (BufferedSequence, ListAsListSource, ReversedList, etc.) and helper classes

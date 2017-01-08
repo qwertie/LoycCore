@@ -54,7 +54,7 @@ Managing dependencies on so many different services may become such a chore that
 
 One solution to this problem is to hard-code, inside each component like `C`, a reference to a specific DI framework (or "IoC Container") so it can look up services that were not passed to the constructor. This practice is often taken to its limit, with the result that `C` has no constructor arguments at all. When components rely on a DI framework directly and exclusively, we call it the "service locator pattern", but [it is an antipattern](http://blog.ploeh.dk/2010/02/03/ServiceLocatorisanAnti-Pattern/) that should be avoided because it's hard for people using `C` to understand `C`'s dependencies.
 
-Another problem with using a "service locator" is that there are many different DI frameworks; taking a dependency on one _particular_ DI framework defeats the original goal of decoupling components from the services they use. Developers don't want to include four different DI frameworks in their project just because their components use four different DI frameworks. It wouldn't be so bad if there were some de-facto standard DI framework. Sadly, there is not.
+Another problem with using a "service locator" is that there are many different DI frameworks; taking a dependency on one _particular_ DI framework defeats the original goal of decoupling components from the services they use. Developers don't want to include four different DI frameworks in their project just because their components use four different DI frameworks. It wouldn't be so bad if there were some de-facto standard DI framework. Sadly, there is not. However, you should be aware that .NET [has had a built-in simple service locator since .NET 1.1](http://blog.differentpla.net/blog/2011/12/20/did-you-know-that-net-already-had-an-ioc-container) that implements  `IServiceProvider` and `IServiceContainer`. Also, Loyc.Essentials has a `ServiceProvider` class with tiny extension methods that make these interfaces generic.
 
 The Ambient Service Pattern
 ---------------------------
@@ -106,15 +106,15 @@ public struct SavedThreadLocal<T> : IDisposable
 
     public SavedThreadLocal(ThreadLocal<T> variable, T newValue)
     {
-    	_variable = variable;
-    	_oldValue = variable.Value;
-    	variable.Value = newValue;
+        _variable = variable;
+        _oldValue = variable.Value;
+        variable.Value = newValue;
     }
     public void Dispose()
     {
-    	_variable.Value = _oldValue;
+        _variable.Value = _oldValue;
     }
-		
+
     public T OldValue { get { return _oldValue; } }
     public T Value { get { return _variable.Value; } }
 }
