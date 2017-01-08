@@ -6,6 +6,42 @@ layout: page
 LoycCore and LES
 ----------------
 
+### v2.4.2: January 8, 2017 ###
+
+- Rename `LinqToCollections` to `LinqToLists`.
+- Rename some rarely used members of `Severity` to form a group of "frequency signals": `Common`, `Uncommon`, `Rare`.
+- Add extension methods for `IServiceProvider`/`IServiceContainer` (`System.ComponentModel.Design`) in static class `Loyc.ServiceProvider`.
+
+#### LESv3 (prerelease) changed:
+
+- Eliminated block-call expressions
+- Eliminated single-quoted operators
+- Keywords now have a separate token type
+- Syntax of keyword expressions changed. Initial expr now optional; newline allowed before braces/continuators; any expression is allowed after a continuator.
+- Parser: introduced token lists (`VList<LNode>`) and eliminated token tree literals (`TokenTree`)
+- Parser: edited to reduce output size
+- Parser: tweaked error handling
+- Parser: `@@` now acts like an attribute instead of only being allowed after `(`
+- Parser now requires a space after word operators and "combo" operators
+
+### v2.4.0.1: December 26, 2016 ###
+
+- Changed LES generic syntax so that `a.b!c` is parsed as `a.(b!c)` instead of `(a.b)!c`.
+
+### v2.3.3: December 21, 2016 ###
+
+- LESv3: added syntax `(@@ expr)` to group an expression without adding `#trivia_inParens`
+- LESv3 parser now requires whitespace after an attribute.
+- Bug fix: LES2 and LES3 printers now print ``@`'.`(a, -b)`` correctly.
+- Bug fix in `LNodeExt.MatchesPattern`: `Foo(...)` did not match pattern `$x(...)`
+- Renamed `IReferenceComparable` to `IReferenceEquatable`
+- Moved `Reverse()` extension method to `LinqToCollections`.
+
+### v2.3.2: December 12, 2016 ###
+
+- Changed return type of `MessageSink.SetDefault` as intended to be done earlier.
+- Rename `MathF8`, `MathF16`, etc. to `MathFPI8`, `MathFPI16`, etc.
+
 ### v2.3.1: December 11, 2016 ###
 
 Loyc.Essentials was split into Loyc.Essentials and Loyc.Math. Loyc.Math contains
