@@ -5,7 +5,7 @@ title: Learn about Loyc.Math
 
 ### Articles ###
 
-- [Arithmetic in generic code](maths.md)
+- [Arithmetic in generic code](maths.html)
 
 ### Notable math types ###
 
