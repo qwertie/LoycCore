@@ -6,13 +6,13 @@ toc: true
 date: 12 Jan 2017
 ---
 
-At one time, log4net was a very popular logging library for C#/.NET. Several years ago I decided to have a look at it - without ever actually using it before - with the goal of producing another logging library that was much smaller but largely compatible with log4net.
+At one time, log4net was a very popular logging library for C#/.NET. Several years ago I decided to have a look at it - admittedly, without ever actually using it before - with the goal of producing a much smaller logging library within [Loyc.Essentials](http://core.loyc.net/essentials/) that provided the most commonly-used features of log4net.
 
-I failed. It turned out that log4net was not merely a _large_ library (larger than all of Loyc.Essentials), but it was also very complicated, a spaghetti of interwoven interfaces and dependencies. It was difficult to follow how it worked internally, and difficult to identify a useful "core" that would retain source-level compatibility with the most commonly-used features.
+That didn't work out. It turned out that log4net was not merely a _large_ library (larger than all of Loyc.Essentials), but it was also very complicated, a spaghetti of interwoven interfaces and dependencies. It was difficult to follow how it worked internally, and I wasn't sure where the useful "core" was that would retain compatibility with the most commonly-used features.
 
-Instead I decided to design a small logging library without regard for compatibility with log4net - something that would be useful _not only_ for logging but also for other situations where messages are produced, such as error messages in my compilers.
+Instead I just designed a small logging library without regard for compatibility with log4net - something that would be useful _not only_ for logging but also for other situations where messages are produced, such as error messages in my compilers.
 
-I call it the "message sink" - a drain you dump messages into. This is consistent with a naming convention in Loyc.Essentials of "sources" and "sinks", e.g. `ICollectionSink<in T>` is a subset of `ICollection<T>` that lets you adding or removing items, but not get items out, while `IListSource<out T>` is like `IList<T>` but you can only get items, not add or remove items.
+I call it the "message sink" - a drain you dump messages into. The word "sink" is consistent with the naming convention of other "sources" and "sinks" in Loyc.Essentials, e.g. `ICollectionSink<in T>` is a subset of `ICollection<T>` that lets you adding or removing items, but not get items out, while `IListSource<out T>` is like `IList<T>` but you can only get items, not add or remove items.
 
 The interface
 -------------
@@ -35,28 +35,28 @@ The interface
 		void Write(Severity level, TContext context, string format, params object[] args);
 	}
 
-Note the `in` in `IMessageSink<in TContext>`. This means that any `IMessageSink<object>` is implicitly convertible to `IMessageSink<C>` for any class C. Because of this, you can, for example, use `ConsoleMessageSink` as if it were `IMessageSink<C>` even though it only implements `IMessageSink`.
+Most people will just use `IMessageSink`, but you can also customize the meaning of the `context` parameter. Notice the `in` in `IMessageSink<in TContext>`: this means that any `IMessageSink<object>` is implicitly convertible to `IMessageSink<C>` for any class C. Because of this, you can, for example, use `ConsoleMessageSink` as if it were `IMessageSink<C>` even though it only implements `IMessageSink`.
 
-The first method, `IsEnabled`, lets you find out before printing a message whether that message could actually be printed (if it returns false, that message type is being filtered out.) This lets you avoid doing work to construct a message that will be discarded.
-
-Now, whereas `log4net` lets you write an object _or_ a string, to me it made more sense to write an object _and_ a string, where the object provides some sort of "context" for the message. In addition to this interface, many log4net-like extension methods are provided that you can use as shortcuts (e.g. `Warn("It's cold outside!")`)
+The first method, `IsEnabled(c)`, lets you find out before printing a message whether that message could actually be printed (if it returns false, messages in category `c` are being filtered out.) This lets you avoid doing work to construct a message that will be discarded.
 
 A message has four parts:
 
 1. `Severity type`: an enum that indicates what kind of message this is (how "serious" or how "common") on a numeric scale. Commonly used values include `Severity.Error`, `Severity.Warning`, and `Severity.Debug`. 
 2. `TContext context`: an object that represents the "context" or "location" that the message relates to. Typically `TContext = object`, so this parameter could be anything, and the exact meaning of the context can vary from application to application.
-3. `string format`: a message to be logged.
+3. `string format`: a message to be logged, with optional argument placeholders like `{0}` and `{1}`.
 4. format arguments: objects or strings to insert into the format string.
 
-Only a single `Write()` method is _truly_ needed, but it is expected to be fairly common that a message sink will drop some or all messages without printing them, e.g. if a message sink is used for logging, verbose messages might be "off" by default. It would be wasteful to actually localize and format a message if the message will not actually be printed, and it would even be wasteful to create an array of objects to hold the arguments if they are just going to be discarded. With that in mind, since most formatting requests only need a couple of arguments, there is an overload of `Write()` that accepts up to two arguments without the need to package them into an array.
+Now, `log4net` lets you write an object _or_ a string, but to me it made more sense to write an object _and_ a string, where the object provides some sort of "context" for the message. In addition to this interface, many log4net-like extension methods are provided that you can use as shortcuts (e.g. `Warn("It's cold outside!")`, which uses `level: Severity.Warning` and `context: null`.)
 
-In total there are three:
+Only a single `Write()` method is _truly_ needed, but it is expected to be fairly common that a message sink will drop some or all messages without printing them, e.g. if a message sink is used for logging, verbose messages might be "off" by default. It would be wasteful to actually format a message if the message will not actually be printed, and it would even be wasteful to create an array of objects to hold the arguments if they are just going to be discarded. With that in mind, since most formatting requests only need a couple of arguments, there is an overload of `Write()` that accepts up to two arguments without the need to package them into an `params` array.
+
+So there's three `Write`s:
 
 - `Write(Severity, TContext, string)` for strings that can (and should) be written without performing substitution.
 - `Write(Severity, TContext, string, object, object)` for messages with one or two arguments. If there is only one argument, the second defaults to `null`. Many other libraries have separate overloads for one, two and three arguments; `IMessageSink` only has one fixed-length overload because it is designed to be easy to _implement_ the interface, not just easy to consume it.
 - `Write(Severity, TContext, string, params object[])` for cases with more than two arguments.
 
-Message sinks _may_ perform localization by calling [`Localize.Localized()`](localize.html).
+Message sinks _may_ perform localization using [`Localize.Localized()`](http://core.loyc.net/essentials/localize.html).
 
 Basic sinks
 -----------
@@ -76,7 +76,7 @@ comes out as
 
     Error: Foo.csv: Syntax error
 
-By default, `ConsoleMessageSink` (but not `TraceMessageSink`) eliminates the severity for lower-level messages (anything below `Warning`), so the text color alone indicates the `Severity`.
+By default, `ConsoleMessageSink` (but not `TraceMessageSink`) leaves out the severity for lower-level messages (anything below `Warning`), so the text color alone indicates the `Severity`.
 
 **Note**: Message sinks convert the context object to a string by calling `MessageSink.ContextToString`, see below.
 
@@ -94,7 +94,7 @@ Some sink types are wrapper objects that modify an "inner" or "target" sink:
 Comparison with log4net
 -----------------------
 
-log4net is typically configured via XML files. It would be nice if a volunteer would step up to add a similar feature to Loyc Core, but I don't personally need XML-based configuration, and in the interest of keeping Loyc.Essentials small, such a feature would probably end up in Loyc.Utilities.dll (also on NuGet)
+log4net is typically configured via XML files. It would be nice if a volunteer would step up to add a similar feature to Loyc Core, but I don't personally need XML-based configuration, and in the interest of keeping Loyc.Essentials small, that feature would probably end up in Loyc.Utilities.dll (also on NuGet)
 
 In log4net there is a convention of defining a static field in each of your classes to provide logging:
 
@@ -105,6 +105,8 @@ You can do something similar with message sinks:
 
     private static readonly IMessageSink log = MessageSink.WithContext
         (System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+If you want to do Type-specific filtering (e.g. filtering out Debug messages in cerrtain types but not others), Loyc.Essentials doesn't currently support that directly; you'd need to write some custom code.
 
 You'll also need `using Loyc` so that the extension methods are available.
 
@@ -223,3 +225,8 @@ The `LogException` exception takes four arguments just like a message sink:
 The `severity` argument is not required; the default is `Severity.Error`.
 
 `LogException` has a `Msg` property of type `LogMessage` where it stores this information.
+
+Get it
+------
+
+In Visual Studio, you can use NuGet to install Loyc.Essentials which includes everything described here. The source code is [here](https://github.com/qwertie/ecsharp/tree/master/Core/Loyc.Essentials/MessageSinks). Thanks for reading!

@@ -6,7 +6,7 @@ title: Learn about Loyc.Essentials
 - [Collection interfaces](http://loyc.net/2014/using-loycessentials-collection.html)
 - [Linq-to-Collections](linq-to-lists.html)
 - [Localize: the easiest way to make your app ready for translations](localize.html)
-- [Message sinks: a very small logging system](localize.html)
+- [Message sinks: a very small logging system](messagesink.html)
 - [Dependency Injection, Pervasive Services and the Ambient Service Pattern](ambient-service-pattern.html)
 - TODO: Write about slices 
 - TODO: Write about other collection extension methods
