@@ -4,12 +4,13 @@ title: Learn about Loyc.Essentials
 ---
 
 - [Collection interfaces](http://loyc.net/2014/using-loycessentials-collection.html)
-- [Dependency Injection, Pervasive Services and the Ambient Service Pattern](ambient-service-pattern.html)
 - [Linq-to-Collections](linq-to-lists.html)
-- TODO: Write about other collection extension methods
+- [Localize: the easiest way to make your app ready for translations](localize.html)
+- [Message sinks: a very small logging system](localize.html)
+- [Dependency Injection, Pervasive Services and the Ambient Service Pattern](ambient-service-pattern.html)
 - TODO: Write about slices 
+- TODO: Write about other collection extension methods
 - TODO: Write about adapters (BufferedSequence, ListAsListSource, ReversedList, etc.) and helper classes
-- TODO: Write about message sinks
 - TODO: Write about MiniTest framework
 - TODO: Write about `G`lobal methods
 - TODO: Write about helper classes (EmptyList, Repeated...)
