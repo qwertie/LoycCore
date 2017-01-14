@@ -19,21 +19,23 @@ The interface
 
 `IMessageSink` is a simple interface designed to make it easy to define your own implementations, so that you can easily extend it with more functionality as you need it - while balancing the need for good performance. 
 
-	// Alias for IMessageSink<object>
-	public interface IMessageSink : IMessageSink<object>
-	{
-	}
-	public interface IMessageSink<in TContext>
-	{
-		/// <summary>Returns true if messages of the specified type will actually be 
-		/// printed, or false if Write(type, ...) has no effect.</summary>
-		bool IsEnabled(Severity type);
-		
-		/// <summary>Writes a message to a log or other target.</summary>
-		void Write(Severity level, TContext context, string format);
-		void Write(Severity level, TContext context, string format, object arg0, object arg1 = null);
-		void Write(Severity level, TContext context, string format, params object[] args);
-	}
+~~~csharp
+// Alias for IMessageSink<object>
+public interface IMessageSink : IMessageSink<object>
+{
+}
+public interface IMessageSink<in TContext>
+{
+	/// <summary>Returns true if messages of the specified type will actually be 
+	/// printed, or false if Write(type, ...) has no effect.</summary>
+	bool IsEnabled(Severity type);
+	
+	/// <summary>Writes a message to a log or other target.</summary>
+	void Write(Severity level, TContext context, string format);
+	void Write(Severity level, TContext context, string format, object arg0, object arg1 = null);
+	void Write(Severity level, TContext context, string format, params object[] args);
+}
+~~~
 
 Most people will just use `IMessageSink`, but you can also customize the meaning of the `context` parameter. Notice the `in` in `IMessageSink<in TContext>`: this means that any `IMessageSink<object>` is implicitly convertible to `IMessageSink<C>` for any class C. Because of this, you can, for example, use `ConsoleMessageSink` as if it were `IMessageSink<C>` even though it only implements `IMessageSink`.
 
@@ -114,42 +116,44 @@ This will send messages to the default message sink (`MessageSink.Default`) usin
 
 `IMessageSink` has a series of extension methods like these, which lets you use it like log4net:
 
-	public static bool IsErrorEnabled<C>(this IMessageSink<C> sink)
-	{
-		return sink.IsEnabled(Severity.Error);
-	}
-	public static void Error(this IMessageSink<object> sink, string format)
-	{
-		sink.Write(Severity.Error, null, format);
-	}
-	public static void ErrorFormat(this IMessageSink<object> sink, string format, params object[] args)
-	{
-		sink.Write(Severity.Error, null, format, args);
-	}
-	public static void Error<C>(this IMessageSink<C> sink, C context, string format)
-	{
-		sink.Write(Severity.Error, context, format);
-	}
-	/* ...more Error methods... */
-	
-	public static bool IsWarnEnabled<C>(this IMessageSink<C> sink)
-	{
-		return sink.IsEnabled(Severity.Warning);
-	}
-	public static void Warn(this IMessageSink<object> sink, string format)
-	{
-		sink.Write(Severity.Warning, null, format);
-	}
-	public static void WarnFormat(this IMessageSink<object> sink, string format, params object[] args)
-	{
-		sink.Write(Severity.Warning, null, format, args);
-	}
-	public static void Warning<C>(this IMessageSink<C> sink, C context, string format)
-	{
-		sink.Write(Severity.Warning, context, format);
-	}
+~~~csharp
+public static bool IsErrorEnabled<C>(this IMessageSink<C> sink)
+{
+	return sink.IsEnabled(Severity.Error);
+}
+public static void Error(this IMessageSink<object> sink, string format)
+{
+	sink.Write(Severity.Error, null, format);
+}
+public static void ErrorFormat(this IMessageSink<object> sink, string format, params object[] args)
+{
+	sink.Write(Severity.Error, null, format, args);
+}
+public static void Error<C>(this IMessageSink<C> sink, C context, string format)
+{
+	sink.Write(Severity.Error, context, format);
+}
+/* ...more Error methods... */
 
-	/* ...more Warn methods... */
+public static bool IsWarnEnabled<C>(this IMessageSink<C> sink)
+{
+	return sink.IsEnabled(Severity.Warning);
+}
+public static void Warn(this IMessageSink<object> sink, string format)
+{
+	sink.Write(Severity.Warning, null, format);
+}
+public static void WarnFormat(this IMessageSink<object> sink, string format, params object[] args)
+{
+	sink.Write(Severity.Warning, null, format, args);
+}
+public static void Warning<C>(this IMessageSink<C> sink, C context, string format)
+{
+	sink.Write(Severity.Warning, context, format);
+}
+
+/* ...more Warn methods... */
+~~~
 
 The names `Warn` and `WarnFormat` come directly from log4net. 
 
@@ -166,26 +170,32 @@ Customizing behavior
 
 Of course, you can always implement your own `IMessageSink` to get custom behavior. You can also quickly create a message sink without implementing the entire `IMessageSink` interface, by calling `MessageSink.FromDelegate`:
 
+~~~csharp
     var sink = MessageSink.FromDelgate(
         (level, context, fmt, args) => {}, 
         level => /* return true if level is enabled */);
+~~~
 
 You can set the default message sink by calling `MessageSink.SetDefault()`. This method returns a `using`-compatible structure so that if you don't want to change it permanently, you can change it temporarily. For example:
 
+~~~csharp
     // block all messages temporarily
     using (MessageSink.SetDefault(MessageSink.Null)) {
         DoSomething();
     }
     // old message sink is restored here
+~~~
 
 This is a case of the [Ambient Service Pattern](http://core.loyc.net/essentials/ambient-service-pattern.html).
 
 Message sinks that need to convert the `context` to a string should do so by calling `MessageSink.ContextToString(context)`. This method's default behavior is to check if the object implements the `IHasLocation` interface:
 
-    public interface IHasLocation // in namespace Loyc
-    {
-        object Location { get; }
-    }
+~~~csharp
+public interface IHasLocation // in namespace Loyc
+{
+    object Location { get; }
+}
+~~~
 
 If it does, the `Location` property is called and the returned location is converted to a string; otherwise, `ToString()` is called on the context itself.
 
