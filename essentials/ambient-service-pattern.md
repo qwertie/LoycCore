@@ -158,7 +158,8 @@ public class ServiceFactory
 }
 ~~~
 
-### Beware the .NET Framework ###
+Beware the .NET Framework
+-------------------------
 
 Normally, the Ambient Service Pattern is implemented with thread-local variables since each thread might be doing unrelated tasks that require different service objects.
 
@@ -169,7 +170,8 @@ Unfortunately, when you create a new thread (or `Task` or `BackgroundWorker`), *
 
 Due to this serious limitation of the CLR/BCL, the Ambient Service Pattern works poorly in C# programs that juggle a lot of threads. Please [vote for Microsoft to fix this issue](https://visualstudio.uservoice.com/forums/121579-visual-studio-ide/suggestions/17356351-thread-local-variable-inheritance-or-executioncont).
 
-### Summary ###
+Summary
+-------
 
 In summary, the Ambient Service Pattern is a useful way to with services that are widely used throughout an application, when
 
@@ -179,7 +181,8 @@ In summary, the Ambient Service Pattern is a useful way to with services that ar
 
 The Ambient Service Pattern is meant only for widely used background services. Ordinary dependency injection (such as constructor injection) should still be used in most cases.
 
-### Ambient Service Pattern in Loyc libraries ###
+Ambient Service Pattern in Loyc libraries
+-----------------------------------------
 
 Several Loyc components use the pattern.
 
@@ -195,6 +198,7 @@ Several Loyc components use the pattern.
 - `ILNodePrinter`: `LNode.Printer` and `LNode.SetPrinter`
 - `Token`: `Token.ToStringStrategy` and `Token.SetToStringStrategy`
 
-### P.S. ###
+P.S.
+----
 
 There is a project called [`SystemWrapper`](https://systemwrapper.codeplex.com/) that defines interfaces for .NET's static file system methods and for lots of other stuff in the .NET BCL. It doesn't use the Ambient Service Pattern, though.
