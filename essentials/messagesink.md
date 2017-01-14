@@ -3,7 +3,7 @@ title: Message sinks!
 tagline: A very small logging library
 layout: article
 toc: true
-date: 12 Jan 2017
+date: 14 Jan 2017
 ---
 
 At one time, log4net was a very popular logging library for C#/.NET. Several years ago I decided to have a look at it - admittedly, without ever actually using it before - with the goal of producing a much smaller logging library within [Loyc.Essentials](http://core.loyc.net/essentials/) that provided the most commonly-used features of log4net.

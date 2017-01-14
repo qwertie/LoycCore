@@ -164,7 +164,8 @@ if you write
         "Save As...".Localized()
 
 Then `resourceManager.GetString("Save As...")` is called to get the
-translated string, or the original string if no translation was found.
+translated string, or the original string if no translation was found 
+(and yes, in your resx file you *can* use spaces and punctuation in the left-hand side).
 You can even add a "name calculator" to encode your resx file's naming 
 convention, e.g. by removing spaces and punctuation (for details, look at
 the [`UseResourceManager`](http://ecsharp.net/doc/code/classLoyc_1_1Localize.html) method.)
@@ -181,3 +182,8 @@ icons). This causes Visual Studio to generate a `Resources` class with a
 - When your program starts, call `Localize.UseResourceManager(Resources.ResourceManager)`.
 - Use the `Localized()` extension method to get translations of short strings.
 - For long strings, use `Localize.Symbol("ShortAlias", "Long string", params...)`. The first argument is the string passed to `ResourceManager.GetString()`
+
+GNU gettext
+-----------
+
+I haven't tried this, but C/C++ open source software often uses GNU gettext to do translations. Reportedly, [it's possible to use gettext with C# too](https://manas.tech/blog/2009/10/01/using-gnu-gettext-for-i18n-in-c-and-asp-net.html).
