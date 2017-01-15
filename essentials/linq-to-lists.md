@@ -38,7 +38,114 @@ LINQ-to-Lists has the following methods that don't improve performance but **pre
 
 Occasionally, preserving the interface yields higher performance; for example, `list.Take(N).Last()` would scan N items when using `Enumerable` but immediately returns `list[Math.Max(list.Count, N) - 1]` when using Loyc.Essentials.
 
+### A peek inside ###
+
 You can find the Enhanced C# source code [here](https://github.com/loycnet/ecsharp/blob/master/Core/Loyc.Essentials/Collections/ExtensionMethods/LinqToLists.ecs). Admittedly, it's not super simple, as it is part of a larger library themed "stuff that should be built into the .NET framework, but isn't". It uses [Enhanced C#](http://ecsharp.net) to generate variations of similar code, and it relies on several adapter types defined [here](https://github.com/loycnet/ecsharp/tree/master/Core/Loyc.Essentials/Collections/Adapters) and helper classes in [here](https://github.com/loycnet/ecsharp/tree/master/Core/Loyc.Essentials/Collections/HelperClasses). Those, in turn, may rely on some of the base classes [here](https://github.com/loycnet/ecsharp/tree/master/Core/Loyc.Essentials/Collections/BaseClasses) and some of the interfaces [here](https://github.com/loycnet/ecsharp/tree/master/Core/Loyc.Essentials/Collections/Interfaces).
+
+It's a lot of code, so let's just look at one example. `TakeNowWhile` is implemented like this:
+
+    public static ListSlice<T> TakeNowWhile<T>(this IList<T> list,
+                                               Func<T, bool> predicate)
+    {
+        Maybe<T> value;
+        for (int i = 0;; i++) {
+            if (!(value = list.TryGet(i)).HasValue)
+                return new ListSlice<T>(list); // entire list
+            else if (!predicate(value.Value))
+                return new ListSlice<T>(list, 0, i);
+        }
+    }
+
+Loyc.Essentials has a lot extension methods outside of `LinqToLists`. One of them is `TryGet`, which is used here to get the item if it exists:
+
+    public static Maybe<T> TryGet<T>(this IList<T> list, int index)
+    {
+        if ((uint)index < (uint)list.Count)
+            return list[index];
+        return Maybe<T>.NoValue;
+    }
+
+This returns `Maybe<T>`, a structure in Loyc.Essentials that is practically identical to the standard `Nullable<T>` except that `T` is allowed to be a class. So if the index is out of range, `TryGet(i)` returns `NoValue` (a.k.a. `default(Maybe<T>)`), which in turn makes `TakeNowWhile` decide that the entire list should be returned (wrapped in a `ListSlice`).
+
+On the other hand, if `predicate(value.Value)` returns `false` then just a part or "slice" of the list is returned. `ListSlice<T>` is a struct, so if you use `var` to hold the result, or immediately iterate with `foreach`, no memory allocation will occur (in contrast with `System.Linq.Enumerable`):
+
+    var list = new List<int> { 1, 2, 3, -4, 5 };
+    var slice = list.TakeNowWhile(x => x > 0); // first three items
+
+`ListSlice` looks like this:
+
+~~~
+public struct ListSlice<T> : IRange<T>, ICloneable<ListSlice<T>>,
+     IListAndListSource<T>, ICollectionEx<T>, IArray<T>, IIsEmpty
+{
+    public static readonly ListSlice<T> Empty = new ListSlice<T>();
+
+    IList<T> _list;
+    int _start, _count;
+
+    public ListSlice(IList<T> list, int start, int count = int.MaxValue)
+    {
+        _list = list;
+        _start = start;
+        _count = count;
+        if (start < 0) 
+            throw new ArgumentException("The start index was below zero.");
+        if (count < 0)
+            throw new ArgumentException("The count was below zero.");
+        if (count > _list.Count - start)
+            _count = System.Math.Max(_list.Count - start, 0);
+    }
+
+    public ListSlice(IList<T> list)
+    {
+        _list = list;
+        _start = 0;
+        _count = list.Count;
+    }
+
+    public int Count
+    {
+        get { return _count; }
+    }
+    public bool IsEmpty
+    {
+        get { return _count == 0; }
+    }
+    public T First
+    {
+        get { return this[0]; }
+    }
+    public T Last
+    {
+        get { return this[_count - 1]; }
+    }
+
+    public T this[int index]
+    {
+        get {
+            if ((uint)index < (uint)_count)
+                return _list[_start + index];
+            throw new ArgumentOutOfRangeException("index");
+        }
+        set {
+            if ((uint)index < (uint)_count)
+                _list[_start + index] = value;
+            else
+                throw new ArgumentOutOfRangeException("index");
+        }
+    }
+    ...
+}
+~~~
+
+It goes on like that for about 150 more lines of code; Loyc collection classes and wrappers implement not just the standard `IList<T>` interface but also several other handy interfaces which I won't talk about right now because they are not related to the idea of "LINQ to lists".
+
+An interesting thing to note here is that a `ListSlice<T>` is writable, so for example, if you write
+
+    var list = new List<int> { 1, 2, 3, -4, 5 };
+    (list.Skip(2))[1] = 4;
+
+You're modifing the original list at index 3.
 
 ### More extension methods! ###
 

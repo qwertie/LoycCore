@@ -1,7 +1,7 @@
 ---
 title: Arithmetic in generic code
 layout: article
-toc: true
+toc: false
 date: 10 Dec 2016
 ---
 
