@@ -6,7 +6,7 @@ toc: true
 date: 14 Jan 2017
 ---
 
-At one time, log4net was a very popular logging library for C#/.NET. Several years ago I decided to have a look at it - admittedly, without ever actually using it before - with the goal of producing a much smaller logging library within [Loyc.Essentials](http://core.loyc.net/essentials/) that provided the most commonly-used features of log4net.
+Several years ago (and still today), log4net was a very popular logging library for C#/.NET. And, several years ago, I had the idea to distill the most important, popular libraries into a single library. So I took a look at log4net - admittedly, without ever actually using it before - with the goal of producing a much smaller logging library within [Loyc.Essentials](http://core.loyc.net/essentials/) that provided the most commonly-used features of log4net.
 
 That didn't work out. It turned out that log4net was not merely a _large_ library (larger than all of Loyc.Essentials), but it was also very complicated, a spaghetti of interwoven interfaces and dependencies. It was difficult to follow how it worked internally, and I wasn't sure where the useful "core" was that would retain compatibility with the most commonly-used features.
 
@@ -93,26 +93,8 @@ Some sink types are wrapper objects that modify an "inner" or "target" sink:
 - `new MessageMulticaster(params IMessageSink[] targets)`: broadcasts a message to a list of sinks. The list can be edited after `MessageMulticaster` is constructed. `IsEnabled(level)` returns true if any of the targets return true for that level.
 - `new MessageSinkWithContext(IMessageSink target, object context, string messagePrefix = null)`: sets the `context` parameter to the specified object if it is null when `Write()` is called. Also, if a message prefix is provided, it is concatenated with the format string before being passed to `target`. (optimization: if you specified a prefix and `target.IsEnabled` returns false, the method returns without doing anything.)
 
-Comparison with log4net
------------------------
-
-log4net is typically configured via XML files. It would be nice if a volunteer would step up to add a similar feature to Loyc Core, but I don't personally need XML-based configuration, and in the interest of keeping Loyc.Essentials small, that feature would probably end up in Loyc.Utilities.dll (also on NuGet)
-
-In log4net there is a convention of defining a static field in each of your classes to provide logging:
-
-    private static readonly log4net.ILog log = log4net.LogManager.GetLogger
-        (System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-You can do something similar with message sinks:
-
-    private static readonly IMessageSink log = MessageSink.WithContext
-        (System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
-
-If you want to do Type-specific filtering (e.g. filtering out Debug messages in cerrtain types but not others), Loyc.Essentials doesn't currently support that directly; you'd need to write some custom code.
-
-You'll also need `using Loyc` so that the extension methods are available.
-
-This will send messages to the default message sink (`MessageSink.Default`) using the `Type` of the current class as the _default_ context parameter (when the context given to `Write` is null).
+Extension methods
+-----------------
 
 `IMessageSink` has a series of extension methods like these, which lets you use it like log4net:
 
@@ -164,6 +146,74 @@ The names `Warn` and `WarnFormat` come directly from log4net.
 the call would be ambiguous between `IMessageSink<C>.Error(C context, string format)` and `IMessageSink.Error(string format, object arg0)`. So be careful: **the word `Format` is needed to tell the compiler that there is no context parameter!** There is no way, unfortunately, to tell the compiler that the context will never be a string.
 
 For warnings, specifically, `log4net` calls them `Warn` but I call them `Warning`. So I decided that _when providing a context parameter_, the method would be called `Warning`. This ensures that when you call `Warn` but you actually intended to call `WarnFormat`, you'll get a compiler error instead of calling the wrong method.
+
+Comparison with log4net
+-----------------------
+
+log4net is typically configured via XML files. It would be nice if a volunteer would step up to add a similar feature to Loyc Core, but I don't personally need XML-based configuration, and in the interest of keeping Loyc.Essentials small, that feature would probably end up in a separate assembly unless the feature can be implemented in quite a compact way.
+
+In log4net there is a convention of defining a static field in each of your classes to provide logging:
+
+    private static readonly log4net.ILog log = log4net.LogManager.GetLogger
+        (System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+You can do something similar with message sinks:
+
+    private static readonly IMessageSink log = MessageSink.WithContext
+        (System.Reflection.MethodBase.GetCurrentMethod().DeclaringType);
+
+This will send messages to the default message sink (`MessageSink.Default`) using the `Type` of the current class as the _default_ context parameter (when the context given to `Write` is null).
+
+If you want to play with message sinks in code that uses log4net already, you could even add a "fake" log4net so that the original code keeps working:
+
+~~~csharp
+using Loyc;
+
+namespace log4net
+{
+    interface ILog : IMessageSink
+    {
+        // If necessary, Add things from the real ILog
+    }
+
+    class MessageSinkAsILog : WrapperBase<IMessageSink<object>>, ILog
+    {
+        public MessageSinkAsILog(IMessageSink<object> wrappedObj) : base(wrappedObj) { }
+
+        public bool IsEnabled(Severity level)
+        {
+            return _obj.IsEnabled(level);
+        }
+        public void Write(Severity level, object context, [Localizable] string format)
+        {
+            _obj.Write(level, context, format);
+        }
+        public void Write(Severity level, object context, [Localizable] string format, 
+                          params object[] args)
+        {
+            _obj.Write(level, context, format, args);
+        }
+        public void Write(Severity level, object context, [Localizable] string format, 
+                          object arg0, object arg1 = null)
+        {
+            _obj.Write(level, context, format, arg0, arg1);
+        }
+    }
+
+    class LogManager
+    {
+        public static ILog GetLogger(object type) {
+            return new MessageSinkAsILog(MessageSink.WithContext(type));
+        }
+    }
+}
+~~~
+
+If you want to do Type-specific filtering (e.g. filtering out Debug messages in certain types but not others), Loyc.Essentials doesn't currently support that directly; you'd need to write some custom code.
+
+You'll also need `using Loyc` so that the extension methods are available.
+
+**Note:** Calls to `IMessageSink` aren't quite source-level compatible with log4net's `ILog`. The first reason is that extension methods like `IsErrorEnabled()` are _methods_, whereas in log4net they are properties. If Microsoft adds ["extension everything"](https://github.com/dotnet/roslyn/issues/11159) to C#, the extension method could eventually be changed to a property. The second reason is that log4net has methods like `Error(object)` that take an object without a string, but Loyc.Essentials has a different "ideology" of passing both an object and a string.
 
 Customizing behavior
 --------------------
@@ -221,7 +271,7 @@ In anticipation that users would accidentally write `Severity.Note` when they me
 
     new SeverityMessageFilter(c.Sink, Severity.Warning, includeDetails: true);
 
-This third parameter simply decrements the second parameter if the second parameter is an even number, so that details are included unless you specifically set that parameter to false. However, no such trickery affects the `SeverityMessageFilter.MinSeverity` property.
+This third parameter simply decrements the second parameter if the second parameter is an even number, so that details are included unless you specifically set that parameter to false. However, no such trickery happens when you set the `SeverityMessageFilter.MinSeverity` property.
 
 Other stuff
 -----------
@@ -234,7 +284,7 @@ The `LogException` exception takes four arguments just like a message sink:
 
 The `severity` argument is not required; the default is `Severity.Error`.
 
-`LogException` has a `Msg` property of type `LogMessage` where it stores this information.
+`LogException` has a `Msg` property of type `LogMessage` where it stores this information. (It is not stored in the `Exception`'s `Data` dictionary because [items in `Data` must be serializable](https://csharp.2000things.com/2013/07/16/888-objects-added-to-exceptions-data-dictionary-must-be-serializable/), but the context object is not necessarily serializable.)
 
 Get it
 ------

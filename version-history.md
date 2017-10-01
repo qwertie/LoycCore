@@ -6,6 +6,71 @@ layout: page
 LoycCore and LES
 ----------------
 
+### v2.6.2: October 1, 2017 ###
+
+- LESv3: Tweaked the precedence of `->` and `<-`. These operators can now be mixed with logical and bitwise operators (`|`, `&&`, `|`, `^` , `&`, `==`, `>`, etc.) and are right-associative.
+
+### v2.6.1: September 28, 2017 ###
+
+#### LES
+
+- Made several changes to LESv3 and LESv2 as discussed in [issue #52](https://github.com/qwertie/ecsharp/issues/52):
+  - v3: Added token lists like `'(+ x 1)` to allow custom syntax (comparable to s-expressions)
+  - v3: `.dotKeywords` will be stored as `#hashKeywords`
+  - v3: `#` is officially an ID character (but was already treated as such)
+  - v3: `.keyw0rds` can now contain digits
+  - v3: Hexadecimal and binary floating-point numbers no longer require a `p0` suffix
+  - v2/v3: The precedence of non-predefined operators will now be based on the last punctuation character, rather than the first punctuation character. If applicable, the first and last punctuation character still determines the precedence (e.g. `>%>` will still have the same precedence as `>>`)
+  - v3: The precedence of `::` has been raised to match `.`
+  - v3: `x*.2` will now be parsed as `x * .2` rather than `x *. 2`, but `0..2` will still be parsed as `0 .. 2`.
+  - v2/v3: The precedence of arrow operators like `->` has been lowered. The parser treats their precedence sa above `&&` but below `| ^`
+  - v3: Modified the set of continuators.
+
+### v2.6.0 ###
+
+#### Loyc.Essentials
+
+- Added `G.True(T)`, `G.True(Action)`, `G.Swap(ref dynamic, ref dynamic)`
+
+#### Loyc.Syntax
+
+- LESv2/v3: Operator `..` now has precedence above `+- * /`.
+- LESv2/v3: Change `!!` from an infix to a suffix operator based on Kotlin's `!!` operator. Add `!.` operator with precedence of `.`.
+- LESv3: Negative numbers are now written `n"-123"` instead of `-123`, (see [blog post](http://loyc.net/2017/negation-blues.html)). Lexer tentatively accepts −123 (en dash).
+- LESv3: Enable printer to print `- -a` and `a. -b` instead of `-`'-`(a)` and `a.(@@ -b)`.
+- Changed symbols `#[]`, `#[,]`, `#in` to `'[]`, `'[,]`, `'in` for consistency with other operators.
+
+### v2.5.1: January 19, 2017 ###
+
+#### Loyc.Syntax
+
+- Bug fix: `ParsingService.ParseFile` could cause `IOException` that says "Cannot access a closed file"
+- `BaseLexer`/`BaseParser`: Renamed the `Error` method that is called by `Match`/`MatchExcept` to `MatchError` and added an anti-infinite-loop mechanism.
+
+### v2.5.0: January 13, 2017 ###
+
+#### Loyc.Essentials
+
+- Renamed `ISinkCollection` => `ICollectionSink`, `ISinkArray` => `IArraySink`, `ISinkList` => `IListSink` for consistency with `IMessageSink` and `IListSource`
+
+#### Localization
+
+- Added `Localize.UseResourceManager()`
+- Methods of `Localize` that accept a symbol representing the string to translate were renamed from `Localized` to `Symbol`.
+- Introduced "auto-fallback" behavior in `ThreadLocalVariable`. `Localize.Localizer` and `Formatter` use it to mitigate .NET's lack of thread-local propagation.
+
+#### Message sinks (logging)
+
+- `MessageSink`: Added extension methods `Error`, `Warn`, `Debug`, etc. Added customizable `ContextToString` delegate to replace `LocationString`. Added `WithContext`.
+- Removed setter of `MessageSink.Default` (use `SetDefault` instead)
+- Wrappers `SeverityMessageFilter` and `MessageSplitter` now have an optional `TContext` type parameter.
+- `ConsoleMessageSink`, `TraceMessageSink` and `NullMessageSink` have singleton `Value` properties now.
+- Added `MessageSinkWithContext<TContext>` wrapper for `IMessageSink`.
+- Changed argument order of `TraceMessageSink` for consistency with other classes
+- Removed `Severity.Detail`, replacing it with a separate `Detail` version of each member of `Severity`.
+- Added `includeDetails` parameter to constructor of `SeverityMessageFilter` in the hope of drawing attention to the possibility of accidentally excluding details, while making some older code behave correctly at the same time.
+- Renamed `MessageSplitter` to `MessageMulticaster`. Renamed some method parameters.
+
 ### v2.4.2: January 8, 2017 ###
 
 - Rename `LinqToCollections` to `LinqToLists`.
