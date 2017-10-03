@@ -51,9 +51,9 @@ namespace Loyc.Syntax
 		public static readonly Symbol Braces = GSymbol.Get("'{}"); //!< "{}" Creates a scope.
 		public static readonly Symbol IndexBracks = GSymbol.Get("'_[]"); //!< "_[]" indexing operator
 		                                                          //!< foo[1, A] <=> @`_[]`(foo, 1, A), but in a type context, Foo[] <=> #of(@`[]`, Foo)
-		public static readonly Symbol Array = GSymbol.Get("#[]");  //!< Used for list/array literals. Not used for attributes.
+		public static readonly Symbol Array = GSymbol.Get("'[]");  //!< Used for list/array literals. Not used for attributes.
 		public static readonly Symbol _Bracks = Array;            //!< Synonym for Array (@@`#[]`)
-		public static readonly Symbol TwoDimensionalArray = GSymbol.Get("#[,]"); //!< int[,] <=> #of(@`#[,]`, int)
+		public static readonly Symbol TwoDimensionalArray = GSymbol.Get("'[,]"); //!< int[,] <=> #of(@`#[,]`, int)
 
 		// New Symbols for C# 5 and 6 (NullDot `?.` is defined elsewhere, since EC# already supported it)
 		public static readonly Symbol Async = GSymbol.Get("#async"); //!< [#async] Task Foo(); <=> async Task Foo();
@@ -166,10 +166,16 @@ namespace Loyc.Syntax
 		public static readonly Symbol ArrayInit = GSymbol.Get("#arrayInit"); //!< C# e.g. int[] x = {1,2} <=> int[] x = #arrayInit(1, 2)
 
 		public static readonly Symbol StackAlloc = GSymbol.Get("#stackalloc"); //!< #stackalloc for C# stackalloc (TODO)
-		public static readonly Symbol Backslash = GSymbol.Get(@"'\");    //!< "\" operator
-		public static readonly Symbol DoubleBang = GSymbol.Get(@"'!!");  //!< "!!" operator
-		public static readonly Symbol _RightArrow = GSymbol.Get(@"'->"); //!< Alias for PtrArrow
-		public static readonly Symbol LeftArrow = GSymbol.Get(@"'<-");   //!< "<-" operator
+		public static readonly Symbol Backslash = GSymbol.Get(@"'\");      //!< "\" operator
+		[Obsolete("Use PreBangBang or SufBangBang")]
+		public static readonly Symbol DoubleBang = GSymbol.Get(@"'!!");    //!< "!!" operator
+		public static readonly Symbol PreBangBang = GSymbol.Get(@"'!!");   //!< "!!" operator
+		public static readonly Symbol SufBangBang = GSymbol.Get(@"'!!suf"); //!< "!!" operator
+		public static readonly Symbol BangBangDot = GSymbol.Get(@"'!!.");  //!< "!!." operator
+		public static readonly Symbol _RightArrow = GSymbol.Get(@"'->");   //!< Alias for PtrArrow
+		public static readonly Symbol LeftArrow = GSymbol.Get(@"'<-");     //!< "<-" operator
+		public static readonly Symbol SingleQuote = GSymbol.Get("'");      //!< Produced by ' in LESv3, which switches parser to prefix expression mode (similar to s-expressions)
+		public static readonly Symbol Parens = GSymbol.Get("'()");      //!< Produced by ' in LESv3, which switches parser to prefix expression mode (similar to s-expressions)
 
 		public static readonly Symbol Readonly = GSymbol.Get("#readonly"); //!< "#readonly" e.g. readonly int X; <=> [#readonly] #var(#int, X);
 		public static readonly Symbol Const = GSymbol.Get("#const");       //!< "#const"    e.g. const int X = 1; <=> [#const] #var(#int, X = 1);
@@ -198,11 +204,12 @@ namespace Loyc.Syntax
 		// Enhanced C# stuff (node names)
 		public static readonly Symbol NullDot = GSymbol.Get("'?.");       //!< "?."  safe navigation ("null dot") operator
 		public static readonly Symbol Exp = GSymbol.Get("'**");           //!< "**"  exponent operator
-		public static readonly Symbol In = GSymbol.Get("#in");            //!< "#in" membership test operator
+		public static readonly Symbol In = GSymbol.Get("'in");            //!< "'in" membership test operator
 		public static readonly Symbol Substitute = GSymbol.Get(@"'$");    //!< "$"   substitution operator
 		public static readonly Symbol _TemplateArg = GSymbol.Get(@"'$");  //!< Alias for Substitude
 		public static readonly Symbol DotDot = GSymbol.Get("'..");        //!< ".." Binary range operator (exclusive)
 		public static readonly Symbol DotDotDot = GSymbol.Get("'...");    //!< "..." Binary range operator (inclusive)
+		public static readonly Symbol DotDotLT = GSymbol.Get("'..<");     //!< "..<" Swift uses this instead of ".."
 		public static readonly Symbol Tuple = GSymbol.Get("#tuple");      //!< "#tuple": (1, "a") <=> #tuple(1, "a")
 		public static readonly Symbol QuickBind = GSymbol.Get("'=:");     //!< "=:" Quick variable-creation operator (variable name on right). In consideration: may be changed to ":::"
 		public static readonly Symbol QuickBindAssign = GSymbol.Get("':="); //!< ":=" Quick variable-creation operator (variable name on left)
@@ -226,6 +233,19 @@ namespace Loyc.Syntax
 		public static readonly Symbol Error = GSymbol.Get("#error");         // e.g. #error("This feature is not supported in Windows CE")
 		public static readonly Symbol Warning = GSymbol.Get("#warning");     // e.g. #warning("Possibly mistaken empty statement")
 		public static readonly Symbol Note = GSymbol.Get("#note");           // e.g. #note("I love bunnies")
+
+		// C# LINQ clauses
+		public static readonly Symbol Linq = GSymbol.Get("#linq");           // e.g. #linq(#from(x in list), #where(x > 0), #select(x))
+		public static readonly Symbol From = GSymbol.Get("#from");           // e.g. #from(x in list) // LHS of `in` can be id or var decl
+		public static readonly Symbol Let = GSymbol.Get("#let");             // e.g. #let(x = y.Foo) // can have any expression inside
+		public static readonly Symbol Join = GSymbol.Get("#join");           // e.g. #join(p in products, #equals(c.ID, p.CID), #into(pGroup))
+		public static readonly Symbol OrderBy = GSymbol.Get("#orderby");     // e.g. #orderby(#ascending(p.Name), #descending(p.Date))
+		public static readonly Symbol Ascending = GSymbol.Get("#ascending");
+		public static readonly Symbol Descending = GSymbol.Get("#descending");
+		public static readonly Symbol Select = GSymbol.Get("#select");       // e.g. #select(p.Name)
+		public static readonly Symbol GroupBy = GSymbol.Get("#groupBy");     // e.g. #groupBy(p.Name, p.Year) - similar to #select, but creates groups
+		public static readonly Symbol Into = GSymbol.Get("#into");           // e.g. #linq(..., #into(id, ...)) - use output of outer query as input to inner query
+		//Where is defined elsewhere in this class                           // e.g. #where(x > 0)
 
 		// Preprocessor directives
 		public static readonly Symbol PPIf = GSymbol.Get("##if");           //!< "##if"      represents the #if preprocessor token (does not reach the parser)
@@ -312,7 +332,8 @@ namespace Loyc.Syntax
 		public static readonly Symbol TriviaForwardedProperty = GSymbol.Get("#trivia_forwardedProperty");   //!< "#trivia_forwardedProperty" e.g. get ==> _x; <=> [#trivia_forwardedProperty] get(@`==>`(_x));
 		/// `[#trivia_rawText("eat my shorts!")] x;` is printed as "eat my shorts!x;".
 		public static readonly Symbol TriviaRawText = GSymbol.Get("#trivia_rawText");                 //!< "#trivia_rawText"
-		public static readonly Symbol TriviaCsRawText = GSymbol.Get("#trivia_C#RawText");             //!< "#trivia_C#RawText" for C# only
+		public static readonly Symbol TriviaCsRawText = GSymbol.Get("#trivia_C#RawText");             //!< #trivia_C#RawText("stuff") for C# only
+		public static readonly Symbol TriviaCsPPRawText = GSymbol.Get("#trivia_C#PPRawText");         //!< #trivia_C#PPRawText("#stuff") for C# only
 		[Obsolete]
 		public static readonly Symbol TriviaRawTextBefore = GSymbol.Get("#trivia_rawTextBefore");     //!< "#trivia_rawTextBefore"
 		[Obsolete]
@@ -365,7 +386,7 @@ namespace Loyc.Syntax
 		/// is true, or 0 if the symbol does not represent an array type.</summary>
 		public static int CountArrayDimensions(Symbol s)
 		{
-			if (s.Name.Length >= 3 && s.Name.StartsWith("#[") && s.Name[s.Name.Length-1] == ']') {
+			if (s.Name.Length >= 3 && s.Name.StartsWith("'[") && s.Name[s.Name.Length-1] == ']') {
 				for (int i = 2; i < s.Name.Length-1; i++)
 					if (s.Name[i] != ',')
 						return 0;
@@ -380,7 +401,7 @@ namespace Loyc.Syntax
 			if (dims <= 0) throw new ArgumentException("GetArrayKeyword(dims <= 0)");
 			if (dims == 1) return Array;
 			if (dims == 2) return TwoDimensionalArray;
-			return GSymbol.Get("#[" + new string(',', dims-1) + "]");
+			return GSymbol.Get("'[" + new string(',', dims-1) + "]");
 		}
 		public static bool IsTriviaSymbol(Symbol name) { return name != null && name.Name.StartsWith("#trivia_"); }
 	}

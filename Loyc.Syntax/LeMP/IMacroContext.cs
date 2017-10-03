@@ -99,15 +99,18 @@ namespace LeMP
 		/// <summary>Runs the macro processor on the specified node(s).</summary>
 		/// <param name="input">The node or node list to process.</param>
 		/// <param name="asRoot">If false, the nodes are treated as children of the 
-		/// current node (using the current list of ancestors as a basis), otherwise
-		/// the nodes are processed alone as if they were a separate file.</param>
+		/// current node (using the current list of ancestors as a basis); if true,
+		/// the list of parent nodes is cleared.</param>
 		/// <param name="resetOpenNamespaces">If false, the set of open namespaces
 		/// stays the same; if true it is cleared to the set of pre-opened 
-		/// namespaces (<see cref="MacroProcessor.PreOpenedNamespaces"/>).</param>
+		/// namespaces (<see cref="MacroProcessor.PreOpenedNamespaces"/>) and
+		/// macros defined with <see cref="RegisterMacro"/> are forgotten.</param>
+		/// <param name="resetProperties">If true, <see cref="ScopedProperties"/>
+		/// is reset to contain only predefined properties.</param>
 		/// <remarks>The node(s)</remarks>
-		VList<LNode> PreProcess(VList<LNode> input, bool asRoot = false, bool resetOpenNamespaces = false, bool areAttributes = false);
-		/// <inheritdoc cref="PreProcess(VList{LNode}, bool, bool, bool)"/>
-		LNode PreProcess(LNode input, bool asRoot = false, bool resetOpenNamespaces = false, bool isTarget = false);
+		VList<LNode> PreProcess(VList<LNode> input, bool asRoot = false, bool resetOpenNamespaces = false, bool resetProperties = false, bool areAttributes = false);
+		/// <inheritdoc cref="PreProcess(VList{LNode}, bool, bool, bool, bool)"/>
+		LNode PreProcess(LNode input, bool asRoot = false, bool resetOpenNamespaces = false, bool resetProperties = false, bool isTarget = false);
 
 		/// <summary>Gets information about all macros registered with the macro 
 		/// processor, including macros whose namespace has not been opened with
@@ -193,25 +196,25 @@ namespace LeMP
 
 		/// <summary>Transforms an option list in the format <c>option1(v1), option2(v2)</c> 
 		/// or <c>option1: v1, option2: v2</c> into a sequence of (key, value) pairs.
-		/// If the format of a given node is invalid, this function yields <c>(null, node)</c>.</summary>
+		/// If the format of a given node is invalid, this function yields <c>(node, null)</c>.</summary>
 		/// <remarks>
 		/// <c>option1: v1, option2: v2</c> is parsed into <c>#namedArg(option1, v1), 
-		/// #namedArg(option2, v2)</c> in EC# or <c>@:(option1, v1), @:(option2, v2)</c> in LES.
+		/// #namedArg(option2, v2)</c> in EC# or <c>@`':`(option1, v1), @`':`(option2, v2)</c> in LES.
 		/// This function recognizes both forms.
 		/// </remarks>
-		public static IEnumerable<KeyValuePair<Symbol, LNode>> GetOptions(VList<LNode> optionList)
+		public static IEnumerable<KeyValuePair<LNode, LNode>> GetOptions(VList<LNode> optionList)
 		{
 			foreach (var option in optionList) {
 				if ((option.Calls(CodeSymbols.NamedArg, 2) || option.Calls(CodeSymbols.Colon, 2)) && option.Args[0].IsId)
 				{
-					Symbol key = option.Args[0].Name;
+					LNode key = option.Args[0];
 					LNode value = option.Args.Last;
-					yield return new KeyValuePair<Symbol, LNode>(key, value);
+					yield return new KeyValuePair<LNode, LNode>(key, value);
 				}
 				else if (option.Args.Count == 1 && option.Target.IsId)
-					yield return new KeyValuePair<Symbol, LNode>(option.Target.Name, option.Args[0]);
+					yield return new KeyValuePair<LNode, LNode>(option.Target, option.Args[0]);
 				else
-					yield return new KeyValuePair<Symbol, LNode>(null, option);
+					yield return new KeyValuePair<LNode, LNode>(option, null);
 			}
 		}
 	}

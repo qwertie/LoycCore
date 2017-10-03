@@ -33,8 +33,6 @@ namespace Loyc.Syntax.Les
 		/// single-quoted strings and 0 for numbers. Operator names are still parsed.</summary>
 		public bool SkipValueParsing = false;
 		protected bool _isFloat, _parseNeeded, _isNegative;
-		// Alternate: hex numbers, verbatim strings
-		// UserFlag: bin numbers, double-verbatim
 		protected NodeStyle _style;
 		protected int _numberBase;
 		protected Symbol _typeSuffix;
@@ -63,7 +61,7 @@ namespace Loyc.Syntax.Les
 			return CharSource.Slice(_startPosition, InputPosition - _startPosition);
 		}
 
-		protected sealed override void AfterNewline()
+		protected sealed override void AfterNewline() // sealed to avoid virtual call
 		{
 			base.AfterNewline();
 		}
@@ -86,32 +84,32 @@ namespace Loyc.Syntax.Les
 
 		protected object ParseSQStringValue()
 		{
-			int c = -1;
 			if (SkipValueParsing)
-				c = '\0';
-			else { 
-				int len = InputPosition - _startPosition;
-				if (!_parseNeeded && len == 3) {
-					c = CharSource[_startPosition + 1];
-				} else {
-					var sb = TempSB();
-					UString original = CharSource.Slice(_startPosition, len);
-					UnescapeQuotedString(ref original, Error, sb, IndentString);
-					Debug.Assert(original.IsEmpty);
-					if (sb.Length == 1)
-						c = sb[0];
-					else {
-						_value = sb.ToString();
-						if (sb.Length == 0)
-							Error(_startPosition, Localize.Localized("Empty character literal"));
-						else
-							Error(_startPosition, Localize.Localized("Character literal has {0} characters (there should be exactly one)", sb.Length));
-					}
-				}
+				return null;
+			else {
+				var text = Text();
+				if (!_parseNeeded && text.Length == 3)
+					return _value = text[1];
+				else
+					return _value = ParseSQStringValue(text, Error);
 			}
-			if (c != -1)
-				_value = CG.Cache((char)c);
-			return _value;
+		}
+
+		protected internal static object ParseSQStringValue(UString text, Action<int, string> Error)
+		{
+			var sb = TempSB();
+			UnescapeQuotedString(ref text, Error, sb, "\t");
+			Debug.Assert(text.IsEmpty);
+			if (sb.Length == 1)
+				return CG.Cache(sb[0]);
+			else {
+				if (sb.Length == 0) {
+					Error(0, Localize.Localized("Empty character literal"));
+				} else {
+					Error(0, Localize.Localized("Character literal has {0} characters (there should be exactly one)", sb.Length));
+				}
+				return sb.ToString();
+			}
 		}
 
 		protected Symbol ParseBQStringValue()
@@ -218,7 +216,7 @@ namespace Loyc.Syntax.Les
 					}
 					if ((category & EscapeC.Unrecognized) != 0) {
 						// This backslash was ignored by UnescapeChar
-						onError(i0, @"Unrecognized escape sequence '\{0}' in string".Localized(ParseHelpers.EscapeCStyle(sourceText[0, ' '].ToString(), EscapeC.Control)));
+						onError(i0, @"Unrecognized escape sequence '\{0}' in string".Localized(PrintHelpers.EscapeCStyle(sourceText[0, ' '].ToString(), EscapeC.Control)));
 					} else if ((category & EscapeC.HasInvalid6DigitEscape) != 0)
 						onError(i0, @"Invalid 6-digit \u code treated as 5 digits".Localized());
 					sb.AppendCodePoint(c);
@@ -771,11 +769,11 @@ namespace Loyc.Syntax.Les
 					return Pair.Create(name, TT.Dot);
 			}
 			
-			if (length >= 2 && ((first == '+' && last == '+') || (first == '-' && last == '-')))
+			if (length >= 2 && first == last && (last == '+' || last == '-' || last == '!'))
 				tt = TT.PreOrSufOp;
 			else if (first == '$')
 				tt = TT.PrefixOp;
-			else if (first == '.' && (length == 1 || last != '.'))
+			else if (last == '.' && (length == 1 || first != '.'))
 				tt = TT.Dot;
 			else if (last == '=' && (length == 1 || (first != '=' && first != '!' && !(length == 2 && (first == '<' || first == '>')))))
 				tt = TT.Assignment;

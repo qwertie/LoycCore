@@ -66,7 +66,7 @@ namespace Loyc.Syntax
 		/// lexer returned by Tokenize() and begins parsing.</summary>
 		/// <param name="input">A source of tokens.</param>
 		/// <param name="msgs">Error and warning messages are sent to this object. 
-		/// If this parameter is null, messages should be sent to <see cref="MessageSink.Current"/>.</param>
+		/// If this parameter is null, messages should be sent to <see cref="MessageSink.Default"/>.</param>
 		/// <param name="mode">Indicates how the input should be parsed.
 		/// <c>null</c> is a synonym for <see cref="ParsingMode.File"/></param>
 		/// <param name="preserveComments">Whether to preserve comments and newlines 
@@ -85,7 +85,7 @@ namespace Loyc.Syntax
 		/// <param name="tokens">List of tokens</param>
 		/// <param name="file">A source file to associate with errors, warnings, and output nodes.</param>
 		/// <param name="msgs">Error and warning messages are sent to this object.
-		/// If this parameter is null, messages should be sent to <see cref="MessageSink.Current"/>.</param>
+		/// If this parameter is null, messages should be sent to <see cref="MessageSink.Default"/>.</param>
 		/// <param name="inputType">Indicates how the input should be parsed.</param>
 		/// <remarks>
 		/// Some languages may offer token literals, which are stored as token trees
@@ -102,14 +102,25 @@ namespace Loyc.Syntax
 	/// <summary>Standard extension methods for <see cref="IParsingService"/>.</summary>
 	public static class ParsingService
 	{
-		static ThreadLocalVariable<IParsingService> _current = new ThreadLocalVariable<IParsingService>();
-		/// <summary>Gets or sets the active language service on this thread. If 
+		static ThreadLocalVariable<IParsingService> _default = new ThreadLocalVariable<IParsingService>();
+		/// <summary>Gets or sets the default language service on this thread. If 
 		/// no service has been assigned on this thread, returns <see cref="LesLanguageService.Value"/>.</summary>
-		public static IParsingService Current
+		public static IParsingService Default
 		{
-			get { return _current.Value ?? LesLanguageService.Value; }
-			set { _current.Value = value; }
+			get { return _default.Value ?? LesLanguageService.Value; }
+			set { _default.Value = value; }
 		}
+        [Obsolete("This property was renamed to 'Default'")]
+        public static IParsingService Current
+		{
+			get { return Default; }
+			set { Default = value; }
+		}
+
+        public static SavedValue<IParsingService> SetDefault(IParsingService newValue)
+        {
+            return new SavedValue<IParsingService>(_default, newValue);
+        }
 
 		#region Management of registered languages
 
@@ -197,8 +208,8 @@ namespace Loyc.Syntax
 		public struct PushedCurrent : IDisposable
 		{
 			public readonly IParsingService OldValue;
-			public PushedCurrent(IParsingService @new) { OldValue = Current; Current = @new; }
-			public void Dispose() { Current = OldValue; }
+			public PushedCurrent(IParsingService @new) { OldValue = Default; Default = @new; }
+			public void Dispose() { Default = OldValue; }
 		}
 
 		#endregion
@@ -206,12 +217,12 @@ namespace Loyc.Syntax
 		/// <summary>Parses a string by invoking <see cref="IParsingService.Tokenize(ICharSource, string, IMessageSink)"/> using an empty string as the file name.</summary>
 		public static ILexer<Token> Tokenize(this IParsingService parser, UString input, IMessageSink msgs = null)
 		{
-			return parser.Tokenize(input, "", msgs ?? MessageSink.Current);
+			return parser.Tokenize(input, "", msgs ?? MessageSink.Default);
 		}
 		/// <summary>Parses a string by invoking <see cref="IParsingService.Parse(ICharSource, string, IMessageSink, ParsingMode, bool)"/> using an empty string as the file name.</summary>
 		public static IListSource<LNode> Parse(this IParsingService parser, UString input, IMessageSink msgs = null, ParsingMode inputType = null, bool preserveComments = true)
 		{
-			return parser.Parse(input, "", msgs ?? MessageSink.Current, inputType, preserveComments);
+			return parser.Parse(input, "", msgs ?? MessageSink.Default, inputType, preserveComments);
 		}
 		/// <summary>Parses a string and expects exactly one output.</summary>
 		/// <exception cref="InvalidOperationException">The output list was empty or contained multiple nodes.</exception>
@@ -246,11 +257,20 @@ namespace Loyc.Syntax
 		{
 			return parser.Tokenize(new StreamCharSource(stream), fileName, msgs);
 		}
-		/// <summary>Opens the specified file and parses it.</summary>
+		/// <summary>Opens the specified file, parses the entire file, and closes the file.</summary>
 		public static IListSource<LNode> ParseFile(this IParsingService parser, string fileName, IMessageSink msgs = null, ParsingMode inputType = null, bool preserveComments = true)
 		{
-			using (var stream = new FileStream(fileName, FileMode.Open))
-				return Parse(parser, stream, fileName, inputType ?? ParsingMode.File, msgs, preserveComments);
+			using (var stream = new FileStream(fileName, FileMode.Open)) {
+				var results = Parse(parser, stream, fileName, inputType ?? ParsingMode.File, msgs, preserveComments);
+				// TODO: think about whether we should explicitly document or spec this out...
+				// If we're not careful, the caller gets a "Cannot access a closed file"
+				// exception. The problem is that IParsingService.Parse() may parse the 
+				// file lazily, so we can't close the file (as `using` does for us) until
+				// we make sure it is fully parsed. Luckily this is easy: just invoke the
+				// Count property, which can only be computed by parsing the whole file.
+				var _ = results.Count;
+				return results;
+			}
 		}
 		/// <summary>Opens the specified file and tokenizes it.</summary>
 		public static ILexer<Token> TokenizeFile(this IParsingService parser, string fileName, IMessageSink msgs = null)

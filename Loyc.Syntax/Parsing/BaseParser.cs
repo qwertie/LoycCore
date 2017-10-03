@@ -36,7 +36,7 @@ namespace Loyc.Syntax
 		}
 
 		/// <summary>Throws LogException when it receives an error. Non-errors
-		/// are sent to <see cref="MessageSink.Current"/>.</summary>
+		/// are sent to <see cref="MessageSink.Default"/>.</summary>
 		public static readonly IMessageSink LogExceptionErrorSink = MessageSink.FromDelegate(
 			(sev, location, fmt, args) =>
 			{
@@ -44,16 +44,16 @@ namespace Loyc.Syntax
 				if (sev >= Severity.Error)
 					throw new LogException(msg);
 				else
-					msg.WriteTo(MessageSink.Current);
+					msg.WriteTo(MessageSink.Default);
 			});
 		[Obsolete("Please use LogExceptionErrorSink instead")]
 		public static readonly IMessageSink FormatExceptionErrorSink = MessageSink.FromDelegate(
 			(sev, location, fmt, args) =>
 			{
 				if (sev >= Severity.Error)
-					throw new FormatException(MessageSink.LocationString(location) + ": " + Localize.Localized(fmt, args));
+					throw new FormatException(MessageSink.ContextToString(location) + ": " + Localize.Localized(fmt, args));
 				else
-					MessageSink.Current.Write(sev, location, fmt, args);
+					MessageSink.Default.Write(sev, location, fmt, args);
 			});
 
 		private IMessageSink _errorSink;
@@ -106,11 +106,11 @@ namespace Loyc.Syntax
 		/// on failure.
 		/// <para/>
 		/// The <c>StartIndex</c> reported by an EOF token is assumed not 
-		/// to be trustworthy: this method will ensure that the character index 
-		/// returned for EOF is at least as large as <c>SourceFile.Text.Count</c>
-		/// if a <see cref="SourceFile"/> was provided, or, otherwise, at least as 
-		/// large as the last token in the file, by scanning backward to find the 
-		/// last token in the file.
+		/// to be trustworthy (since it is allowed to be a "dummy" token): this 
+		/// method will ensure that the character index returned for EOF is at least 
+		/// as large as <c>SourceFile.Text.Count</c> if a <see cref="SourceFile"/> was 
+		/// provided, or, otherwise, at least as large as the last token in the file, 
+		/// by scanning backward to find the last token in the file.
 		/// </remarks>
 		protected virtual int LaIndexToCharIndex(int lookaheadIndex)
 		{
@@ -185,7 +185,7 @@ namespace Loyc.Syntax
 		{
 			Token lt = _lt0;
 			if (set.Contains(LA0Int) == inverted)
-				Error(false, set);
+				MatchError(false, set);
 			else
 				InputPosition++;
 			return lt;
@@ -194,7 +194,7 @@ namespace Loyc.Syntax
 		{
 			Token lt = _lt0; MatchType la = LA0Int;
 			if (!la.Equals(a))
-				Error(false, a);
+				MatchError(false, a);
 			else
 				InputPosition++;
 			return lt;
@@ -203,7 +203,7 @@ namespace Loyc.Syntax
 		{
 			Token lt = _lt0; MatchType la = LA0Int;
 			if (!la.Equals(a) && !la.Equals(b))
-				Error(false, a, b);
+				MatchError(false, a, b);
 			else
 				InputPosition++;
 			return lt;
@@ -212,7 +212,7 @@ namespace Loyc.Syntax
 		{
 			Token lt = _lt0; MatchType la = LA0Int;
 			if (!la.Equals(a) && !la.Equals(b) && !la.Equals(c))
-				Error(false, a, b, c);
+				MatchError(false, a, b, c);
 			else
 				InputPosition++;
 			return lt;
@@ -221,7 +221,7 @@ namespace Loyc.Syntax
 		{
 			Token lt = _lt0; MatchType la = LA0Int;
 			if (!la.Equals(a) && !la.Equals(b) && !la.Equals(c) && !la.Equals(d))
-				Error(false, a, b, c, d);
+				MatchError(false, a, b, c, d);
 			else
 				InputPosition++;
 			return lt;
@@ -230,7 +230,7 @@ namespace Loyc.Syntax
 		{
 			Token lt = _lt0; MatchType la = LA0Int;
 			if (la.Equals(EOF))
-				Error(true);
+				MatchError(true);
 			else
 				InputPosition++;
 			return lt;
@@ -239,7 +239,7 @@ namespace Loyc.Syntax
 		{
 			Token lt = _lt0; MatchType la = LA0Int;
 			if (la.Equals(a) || la.Equals(EOF))
-				Error(true, a);
+				MatchError(true, a);
 			else
 				InputPosition++;
 			return lt;
@@ -248,7 +248,7 @@ namespace Loyc.Syntax
 		{
 			Token lt = _lt0; MatchType la = LA0Int;
 			if (la.Equals(a) || la.Equals(b) || la.Equals(EOF))
-				Error(true, a, b);
+				MatchError(true, a, b);
 			else
 				InputPosition++;
 			return lt;
@@ -257,7 +257,7 @@ namespace Loyc.Syntax
 		{
 			Token lt = _lt0; MatchType la = LA0Int;
 			if (la.Equals(a) || la.Equals(b) || la.Equals(c) || la.Equals(EOF))
-				Error(true, a, b, c);
+				MatchError(true, a, b, c);
 			else
 				InputPosition++;
 			return lt;
@@ -266,7 +266,7 @@ namespace Loyc.Syntax
 		{
 			Token lt = _lt0; MatchType la = LA0Int;
 			if (la.Equals(a) || la.Equals(b) || la.Equals(c) || la.Equals(d) || la.Equals(EOF))
-				Error(true, a, b, c, d);
+				MatchError(true, a, b, c, d);
 			else
 				InputPosition++;
 			return lt;
@@ -383,10 +383,23 @@ namespace Loyc.Syntax
 
 		#endregion
 
-		protected void Error(bool inverted, params MatchType[] expected) { Error(inverted, (IEnumerable<MatchType>)expected); }
-		protected virtual void Error(bool inverted, IEnumerable<MatchType> expected)
+		// Index of token of most recent Match/MatchExcept error 
+		int _lastErrorPosition = -1;
+
+		protected void MatchError(bool inverted, params MatchType[] expected)
 		{
-			Error(0, Localize.Localized("'{0}': expected {1}", ToString(LA0Int), ToString(inverted, expected)));
+			MatchError(inverted, (IEnumerable<MatchType>)expected);
+		}
+		/// <summary>Handles an error that occurs during Match() or MatchExcept()</summary>
+		/// <param name="inverted">Set inversion flag. If true, then <c>expected</c> is actually a list of things that were NOT expected.</param>
+		/// <param name="expected">List of items that were expected (or unexpected, if <c>inverted</c>)</param>
+		protected virtual void MatchError(bool inverted, IEnumerable<MatchType> expected)
+		{
+			if (InputPosition == _lastErrorPosition)
+				InputPosition++; // avoid entering an infinite loop writing errors at same place
+			else
+				Error(0, Localize.Localized("'{0}': expected {1}", ToString(LA0Int), ToString(inverted, expected)));
+			_lastErrorPosition = InputPosition;
 		}
 		protected virtual string ToString(bool inverted, IEnumerable<MatchType> expected)
 		{
@@ -403,7 +416,7 @@ namespace Loyc.Syntax
 		protected virtual void Check(bool expectation, string expectedDescr = "")
 		{
 			if (!expectation)
-				Error(0, Localize.Localized("Syntax error. A required condition was not met: '{0}'", expectedDescr));
+				Error(0, expectedDescr);
 		}
 	}
 	/// <summary>

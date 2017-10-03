@@ -150,7 +150,7 @@ namespace Loyc.Syntax.Les
 			Case(@"+++x---", A(TT.PreOrSufOp, TT.Id, TT.PreOrSufOp), _("'+++"), _("x"), _("'---"));
 			//Case(@"$x\y\`bq`\", A(TT.PrefixOp, TT.Id, TT.SuffixOp, TT.BQString, TT.NormalOp), _("$"), _("x"), _(@"y\"), _("bq"), _(@"\"));
 			Case(@"$~!%^&*-+=|<>/?:._", A(TT.PrefixOp, TT.Id), _("'$~!%^&*-+=|<>/?:."), _("_"));
-			Case(@"$~!%^&*-+=|<>_/?:.", A(TT.PrefixOp, TT.Id, TT.NormalOp), _("'$~!%^&*-+=|<>"), _("_"), _("'/?:."));
+			Case(@"$~!%^&*-+=|<>_/?:.", A(TT.PrefixOp, TT.Id, TT.Dot), _("'$~!%^&*-+=|<>"), _("_"), _("'/?:."));
 			Case(@"@~!%^&*-+=|<>@@/?:.$", A(TT.Id, TT.Literal), _("~!%^&*-+=|<>"), _("/?:.$"));
 			Case(@"@,!;: :^=", A(TT.At, TT.Comma, TT.Not, TT.Semicolon, TT.NormalOp, TT.Assignment), _(""), _("',"), _("'!"), _("';"), _("':"), _(@"':^="));
 		}
@@ -282,7 +282,7 @@ namespace Loyc.Syntax.Les
 			
 			bool error = false;
 			var lexer = new Les2Lexer(input, new MessageSinkFromDelegate((type, ctx, msg, args) => {
-				MessageSink.Trace.Write(type, ctx, msg, args); error = true;
+				TraceMessageSink.Value.Write(type, ctx, msg, args); error = true;
 			}));
 
 			int index = 0;

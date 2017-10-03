@@ -12,19 +12,20 @@ namespace Loyc.Syntax.Les
 
 	/// <summary>This class's main job is to maintain a table of 
 	/// <see cref="Precedence"/> values for LES operators. When you ask about a
-	/// new operator, its precedence is cached for future reference.</summary>
-	public class LesPrecedenceMap
+	/// new operator, its precedence is chosen by this class and cached for 
+	/// future reference.</summary>
+	public class Les2PrecedenceMap
 	{
 		[ThreadStatic]
-		protected static LesPrecedenceMap _default;
-		public static LesPrecedenceMap Default { get { 
-			return _default = _default ?? new LesPrecedenceMap();
+		protected static Les2PrecedenceMap _default;
+		public static Les2PrecedenceMap Default { get { 
+			return _default = _default ?? new Les2PrecedenceMap();
 		} }
 
-		public LesPrecedenceMap() { Reset(); }
+		public Les2PrecedenceMap() { Reset(); }
 
 		/// <summary>Forgets previously encountered operators to save memory.</summary>
-		public void Reset() {
+		public virtual void Reset() {
 			this[OperatorShape.Suffix] = Pair.Create(PredefinedSuffixPrecedence.AsMutable(), P.Primary);
 			this[OperatorShape.Prefix] = Pair.Create(PredefinedPrefixPrecedence.AsMutable(), P.Other);
 			this[OperatorShape.Infix]  = Pair.Create(PredefinedInfixPrecedence .AsMutable(), P.Other);
@@ -37,15 +38,15 @@ namespace Loyc.Syntax.Les
 		/// part of the name in <c>op</c> (see <see cref="IsSuffixOperatorName"/>)</param>
 		/// <param name="op">Parsed form of the operator. op must be a Symbol, but 
 		/// the parameter has type object to avoid casting Token.Value in the parser.</param>
-		public Precedence Find(OperatorShape shape, object op, bool cacheWordOp = true)
+		public Precedence Find(OperatorShape shape, object op, bool cacheWordOp = true, bool les3InfixOp = false)
 		{
 			var pair = this[shape];
-			return FindPrecedence(pair.A, op, pair.B, cacheWordOp);
+			return FindPrecedence(pair.A, op, pair.B, cacheWordOp, les3InfixOp);
 		}
 
 		// Maps from Symbol to Precedence, paired with a default precedece for \word operators
-		Pair<MMap<object, Precedence>, Precedence>[] _precedenceMap = new Pair<MMap<object, Precedence>, Precedence>[4];
-		Pair<MMap<object, Precedence>, Precedence> this[OperatorShape s]
+		protected Pair<MMap<object, Precedence>, Precedence>[] _precedenceMap = new Pair<MMap<object, Precedence>, Precedence>[4];
+		protected Pair<MMap<object, Precedence>, Precedence> this[OperatorShape s]
 		{
 			get { return _precedenceMap[(int)s + 1]; }
 			set { _precedenceMap[(int)s + 1] = value; }
@@ -81,16 +82,17 @@ namespace Loyc.Syntax.Les
 			new MMap<object, Precedence>() {
 				{ S.PreInc,     P.Primary }, // ++, never mind that it's called "pre"inc
 				{ S.PreDec,     P.Primary }, // --
+				{ S.PreBangBang,P.Primary }, // !!
 			}.AsImmutable();
 
 		protected static readonly Map<object, Precedence> PredefinedInfixPrecedence =
 			new MMap<object, Precedence>() {
 				{ S.Dot,         P.Primary    }, // .
 				{ S.QuickBind,   P.Primary    }, // =:
-				{ S.Not,         P.Primary    }, // !
+				//{ (Symbol)"'!.", P.Primary    }, // !. (redundant now that the final char determines the precedence)
+				{ S.Not,         P.Of         }, // !
 				{ S.NullDot,     P.NullDot    }, // ?.
 				{ S.ColonColon,  P.NullDot    }, // ::
-				{ S.DoubleBang,  P.DoubleBang }, // !!
 				{ S.Exp,         P.Power      }, // **
 				{ S.Mul,         P.Multiply   }, // *
 				{ S.Div,         P.Multiply   }, // /
@@ -107,6 +109,7 @@ namespace Loyc.Syntax.Les
 				{ S.XorBits,     P.OrBits     }, // ^
 				{ S.NullCoalesce,P.OrIfNull   }, // ??
 				{ S.DotDot,      P.Range      }, // ..
+				{ (Symbol)".<",  P.Range      }, // .< (controls the precedence of ..<)
 				{ S.GT,          P.Compare    }, // >
 				{ S.LT,          P.Compare    }, // <
 				{ S.LE,          P.Compare    }, // <=
@@ -123,7 +126,7 @@ namespace Loyc.Syntax.Les
 				{ S.NotBits,     P.Other      }, // ~
 			}.AsImmutable();
 		
-		protected Precedence FindPrecedence(MMap<object,Precedence> table, object symbol, Precedence @default, bool cacheWordOp)
+		protected Precedence FindPrecedence(MMap<object,Precedence> table, object symbol, Precedence @default, bool cacheWordOp, bool les3InfixOp = false)
 		{
 			// You can see the official rules in the LesPrecedence documentation.
 			
@@ -143,6 +146,27 @@ namespace Loyc.Syntax.Les
 			char first = sym[1], last = sym[sym.Length - 1];
 			bool isInfix = table == this[OperatorShape.Infix].A;
 
+			if (les3InfixOp)
+			{
+				// Check for lowercase word prefix
+				int i = 1;
+				while (first >= 'a' && first <= 'z' || first == '_') {
+					if (++i == sym.Length) {
+						if (cacheWordOp)
+							table[symbol] = P.LowerKeyword;
+						return P.LowerKeyword;
+					}
+					first = sym[i];
+				}
+				
+				if (i + 1 == sym.Length) {
+					// After the word is a one-character op. See if it is in the table
+					var oneCharOp_ = GSymbol.Get("'" + first);
+					if (table.TryGetValue(oneCharOp_, out prec))
+						return prec;
+				}
+			}
+
 			if (isInfix && last == '=') {
 				if (first == '=' || first == '!')
 					return table[symbol] = P.Compare;
@@ -154,7 +178,7 @@ namespace Loyc.Syntax.Les
 			if (table.TryGetValue(twoCharOp, out prec))
 				return table[symbol] = prec;
 
-			var oneCharOp = GSymbol.Get("'" + first);
+			var oneCharOp = GSymbol.Get("'" + last);
 			if (table.TryGetValue(oneCharOp, out prec))
 				return table[symbol] = prec;
 
@@ -202,7 +226,7 @@ namespace Loyc.Syntax.Les
 		}
 		
 		/// <summary>Returns true if the given Symbol can be printed as an operator 
-		/// without escaping it (LESv2) or adding an apostrophe on the front (LESv3).</summary>
+		/// without escaping it in LESv2.</summary>
 		/// <remarks>The parser should read something like <c>+/*</c> as an operator
 		/// with three characters, rather than "+" and a comment, but the printer 
 		/// is more conservative, so this function returns false in such a case.</remarks>
@@ -254,10 +278,7 @@ namespace Loyc.Syntax.Les
 				return name;
 
 			var was = symbol.ToString();
-			//if (was.EndsWith("\\"))
-			//	return _suffixOpNames[symbol] = (Symbol)symbol;
-			//else
-				return _suffixOpNames[symbol] = GSymbol.Get(symbol.ToString() + "suf");
+			return _suffixOpNames[symbol] = GSymbol.Get(symbol.ToString() + "suf");
 		}
 
 		/// <summary>Decides whether the name appears to represent a suffix operator 
@@ -265,18 +286,30 @@ namespace Loyc.Syntax.Les
 		/// <param name="name">Potential operator name to evaluate.</param>
 		/// <param name="bareName">If the name ends with "suf", this is the same 
 		/// name without "suf", otherwise it is set to <c>name</c> itself. This
-		/// output is calculated even if the function returns false.</param>
-		/// <param name="checkNatural">If true, part of the requirement for 
-		/// returning true will be that IsNaturalOperator(bareName) == true.</param>
-		public static bool IsSuffixOperatorName(Symbol name, out Symbol bareName, bool checkNatural)
+		/// output is calculated even if the function returns false.
+		/// IsNaturalOperator(bareName) is true if the function returns true.</param>
+		public static bool IsSuffixOperatorName(Symbol name, out Symbol bareName)
 		{
 			if (name.Name.EndsWith("suf")) {
 				bareName = (Symbol)name.Name.Substring(0, name.Name.Length - 3);
-				return !checkNatural || IsNaturalOperator(bareName.Name);
+				return IsNaturalOperator(bareName.Name);
 			} else {
 				bareName = name;
 				return false;
 			}
+		}
+	}
+
+	public class Les3PrecedenceMap : Les2PrecedenceMap
+	{
+		[ThreadStatic]
+		protected new static Les3PrecedenceMap _default;
+		public new static Les3PrecedenceMap Default { get { 
+			return _default = _default ?? new Les3PrecedenceMap();
+		} }
+		public override void Reset() {
+			base.Reset();
+			this[OperatorShape.Infix].Item1[S.ColonColon] = LesPrecedence.Primary;
 		}
 	}
 }

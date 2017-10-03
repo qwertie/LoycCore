@@ -10,7 +10,7 @@ namespace Loyc.Syntax.Les
 	using S = CodeSymbols;
 
 	[TestFixture]
-	public class LesParserTests : Les2PrinterAndParserTests
+	public class Les2ParserTests : Les2PrinterAndParserTests
 	{
 		[Test]
 		public void EmptyInput()
@@ -79,7 +79,7 @@ namespace Loyc.Syntax.Les
 			//Test(Mode.Expr, 1, "x >> a + 1",   F.Call(S.Add, F.Call(S.Shr, x, a), one));
 			Test(Mode.Expr, 1, "1 + x >> a",     F.Call(S.Add, one, F.Call(S.Shr, x, a)));
 			Test(Mode.Expr, 0, "x >> a**1",      F.Call(S.Shr, x, F.Call(S.Exp, a, one)));
-			Test(Mode.Expr, 1, "x `Foo` a .. b", F.Call(Foo, x, F.Call(S.DotDot, a, b)));
+			Test(Mode.Expr, 0, "x `Foo` a..b",   F.Call(Foo, x, F.Call(S.DotDot, a, b)));
 			Test(Mode.Expr, 1, "x `Foo` a*b",    F.Call(Foo, x, F.Call(S.Mul, a, b)));
 			Test(Mode.Stmt, 0, "x `Foo` a**b;",  F.Call(Foo, x, F.Call(S.Exp, a, b)));
 			Test(Mode.Expr, 0, "x `Foo` 1 == a", F.Call(S.Eq, F.Call(Foo, x, one), a));
@@ -91,8 +91,8 @@ namespace Loyc.Syntax.Les
 			var results = Les2LanguageService.Value.Parse(str, messages, mode == Mode.Expr ? ParsingMode.Expressions : ParsingMode.Statements, true).ToList();
 			if (messages.List.Count != System.Math.Max(errorsExpected, 0))
 			{
-				messages.WriteListTo(MessageSink.Console);
-				AreEqual(errorsExpected, messages.List.Count); // fail
+				messages.WriteListTo(ConsoleMessageSink.Value);
+				AreEqual(errorsExpected, messages.List.Count, "Wrong error count for {0}", str); // fail
 			}
 			for (int i = 0; i < expected.Length; i++)
 				AreEqual(expected[i], results[i]);

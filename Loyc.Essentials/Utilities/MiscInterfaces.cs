@@ -33,11 +33,15 @@ namespace Loyc
 	/// <see cref="IEqualityComparer{T}"/> to be skipped in favor of reference 
 	/// comparison. <see cref="Symbol"/> implements this interface.
 	/// </remarks>
-	public interface IReferenceComparable { }
+	public interface IReferenceEquatable { }
 
 	/// <summary>Interface for things that have a Value property.</summary>
 	public interface IHasValue<out T>
 	{
 		T Value { get; }
+	}
+	public interface IHasMutableValue<T> : IHasValue<T>
+	{
+		new T Value { get; set; }
 	}
 }

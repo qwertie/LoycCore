@@ -177,7 +177,7 @@ namespace Loyc.Syntax
 	///     decided this wasn't an improvement, it would just shift the pain around.)</li>
 	/// <li>A constructor argument list is required on <i>all</i> types using the #new
 	///     operator, e.g. <c>new int[] { x }</c> must have an empty set of arguments
-	///     on int[], i.e. <c>#new(#of(#[],int)(), x)</c>; this rule makes the 
+	///     on int[], i.e. <c>#new(#of(@`'[]`,int)(), x)</c>; this rule makes the 
 	///     different kinds of new expressions easier to interpret by making them 
 	///     consistent with each other.</li>
 	/// <li>A missing syntax element is now represented by the empty identifier 
@@ -315,6 +315,8 @@ namespace Loyc.Syntax
 		public static CallNode Call(LNode target, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdComplexCallNode(target, VList<LNode>.Empty, new SourceRange(file), style); }
 		public static CallNode Call(Symbol name, VList<LNode> args, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdSimpleCallNode(name, args, new SourceRange(file), style); }
 		public static CallNode Call(LNode target, VList<LNode> args, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdComplexCallNode(target, args, new SourceRange(file), style); }
+		public static CallNode Call(VList<LNode> attrs, Symbol name, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdSimpleCallNodeWithAttrs(attrs, name, VList<LNode>.Empty, new SourceRange(file), style); }
+		public static CallNode Call(VList<LNode> attrs, LNode target, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdComplexCallNodeWithAttrs(attrs, target, VList<LNode>.Empty, new SourceRange(file), style); }
 		public static CallNode Call(VList<LNode> attrs, Symbol name, VList<LNode> args, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdSimpleCallNodeWithAttrs(attrs, name, args, new SourceRange(file), style); }
 		public static CallNode Call(VList<LNode> attrs, LNode target, VList<LNode> args, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdComplexCallNodeWithAttrs(attrs, target, args, new SourceRange(file), style); }
 		public static CallNode Trivia(Symbol name, object value, ISourceFile file = null, NodeStyle style = NodeStyle.Default) { return new StdTriviaNode(name, value, new SourceRange(file), style); }
@@ -518,8 +520,8 @@ namespace Loyc.Syntax
 		/// The full list of specials is <c>! " # $ % &amp; ' ( ) * + , - . /</c> plus
 		/// the space character and the control characters.
 		/// </remarks>
-		public static bool IsSpecialName(string name) { return name != null && name.Length > 0 && name[0] < '0'; }
-		public static bool IsSpecialName(Symbol name) { return name != null && name.Name.Length > 0 && name.Name[0] < '0'; }
+		public static bool IsSpecialName(string name) { return name != null && name.Length > 0 && name[0] <= '\''; }
+		public static bool IsSpecialName(Symbol name) { return name != null && name.Name.Length > 0 && name.Name[0] <= '\''; }
 
 		/// <summary>Creates a node with a new value for Name.</summary>
 		/// <remarks>If IsId, the Name is simply changed. If <see cref="IsCall"/>, 
@@ -714,21 +716,29 @@ namespace Loyc.Syntax
 			get { return _printer.Value ?? _defaultPrinter; }
 			set { _printer.Value = value; }
 		}
+        
+        public static SavedValue<ILNodePrinter> SetPrinter(ILNodePrinter newValue)
+        {
+            return new SavedValue<ILNodePrinter>(_printer, newValue);
+        }
 
-		/// <summary>Helps you change printers temporarily. Usage in C#: 
-		/// <c>using (LNode.PushPrinter(myPrinter)) { ... }</c></summary>
-		/// <remarks>For example, to switch to the EC# printer, use
-		/// <c>using (LNode.PushPrinter(EcsNodePrinter.Printer)) { ... }</c>.
-		/// This changes the default printer. If you don't want to change the
-		/// default printer, please invoke the printer directly: 
-		/// <code>
-		///     var sb = new StringBuilder();
-		///     EcsNodePrinter.Printer(node, sb, MessageSink.Trace);
-		/// </code>
-		/// </remarks>
-		public static PushedPrinter PushPrinter(ILNodePrinter printer) { return new PushedPrinter(printer); }
-		/// <summary>Returned by <see cref="PushPrinter(ILNodePrinter)"/>.</summary>
-		public struct PushedPrinter : IDisposable
+        /// <summary>Helps you change printers temporarily. Usage in C#: 
+        /// <c>using (LNode.PushPrinter(myPrinter)) { ... }</c></summary>
+        /// <remarks>For example, to switch to the EC# printer, use
+        /// <c>using (LNode.PushPrinter(EcsNodePrinter.Printer)) { ... }</c>.
+        /// This changes the default printer. If you don't want to change the
+        /// default printer, please invoke the printer directly: 
+        /// <code>
+        ///     var sb = new StringBuilder();
+        ///     EcsNodePrinter.Printer(node, sb, MessageSink.Trace);
+        /// </code>
+        /// </remarks>
+        [Obsolete("Please use using(LNode.SetPrinter(...)) instead")]
+        public static PushedPrinter PushPrinter(ILNodePrinter printer) { return new PushedPrinter(printer); }
+        
+        /// <summary>Returned by <see cref="PushPrinter(ILNodePrinter)"/>.</summary>
+        [Obsolete]
+        public struct PushedPrinter : IDisposable
 		{
 			ILNodePrinter old;
 			public PushedPrinter(ILNodePrinter @new) { old = Printer; Printer = @new; }

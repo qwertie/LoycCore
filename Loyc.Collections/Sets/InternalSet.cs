@@ -372,8 +372,8 @@ namespace Loyc.Collections.Impl
 		public static readonly InternalSet<T> Empty = new InternalSet<T> { _root = FrozenEmptyRoot() };
 
 		/// <summary>This is <see cref="EqualityComparer{T}.Default"/>, or
-		/// null if T implements <see cref="IReferenceComparable"/>.</summary>
-		public static readonly IEqualityComparer<T> DefaultComparer = typeof(IReferenceComparable).IsAssignableFrom(typeof(T)) ? null : EqualityComparer<T>.Default;
+		/// null if T implements <see cref="IReferenceEquatable"/>.</summary>
+		public static readonly IEqualityComparer<T> DefaultComparer = typeof(IReferenceEquatable).IsAssignableFrom(typeof(T)) ? null : EqualityComparer<T>.Default;
 
 		const int BitsPerLevel = 4;
 		const int FanOut = 1 << BitsPerLevel;
@@ -406,7 +406,7 @@ namespace Loyc.Collections.Impl
 			{
 				int used = (int)(_used & FlagMask), deleted = (int)(_used >> 16);
 				Debug.Assert((used & deleted) == 0);
-				int ones = MathEx.CountOnes(used), children = _children == null ? 0 : _children.Count(n => n != null);
+				int ones = G.CountOnes(used), children = _children == null ? 0 : _children.Count(n => n != null);
 				bool overflow = this is MaxDepthNode && !((MaxDepthNode)this)._overflow.IsEmpty;
 				Debug.Assert(ones + children * CounterPerChild + (overflow ? OverflowFlag : 0) == _counter);
 			}
@@ -689,7 +689,7 @@ namespace Loyc.Collections.Impl
 			// This can only be called when 'child' has 0..4 items left. 
 			// If there is room in the parent for the item(s), it places them
 			// there and removes the reference to the child.
-			Debug.Assert(MathEx.CountOnes(child._used & FlagMask) <= 4);
+			Debug.Assert(G.CountOnes(child._used & FlagMask) <= 4);
 			Debug.Assert(child._children == null);
 			uint slotsUsed = (slots._used << FanOut) | (slots._used & FlagMask);
 			slotsUsed = (slotsUsed >> iHome) & Mask;
@@ -1712,7 +1712,7 @@ namespace Loyc.Collections.Impl
 		{
 			var table = new byte[16];
 			for (int i = 0; i < table.Length; i++)
-				table[i] = (byte)(4 - MathEx.CountOnes(i));
+				table[i] = (byte)(4 - G.CountOnes(i));
 			return table;
 		}
 

@@ -21,7 +21,7 @@ namespace Loyc.Syntax.Les
 		IMessageSink _errors;
 
 		public INodePrinterWriter Writer { get { return _out; } set { _out = value; } }
-		public IMessageSink Errors { get { return _errors; } set { _errors = value ?? MessageSink.Null; } }
+		public IMessageSink ErrorSink { get { return _errors; } set { _errors = value ?? MessageSink.Null; } }
 
 		Les2PrinterOptions _o;
 		public Les2PrinterOptions Options { get { return _o; } }
@@ -40,8 +40,8 @@ namespace Loyc.Syntax.Les
 			var p = _printer = _printer ?? new Les2Printer(TextWriter.Null, null);
 			var oldOptions = p._o;
 			var oldWriter = p.Writer;
-			var oldSink = p.Errors;
-			p.Errors = sink;
+			var oldSink = p.ErrorSink;
+			p.ErrorSink = sink;
 			p.SetOptions(options);
 			p.Writer = new Les2PrinterWriter(target, p.Options.IndentString ?? "\t", p.Options.NewlineString ?? "\n");
 
@@ -52,7 +52,7 @@ namespace Loyc.Syntax.Les
 
 			p.Writer = oldWriter;
 			p._o = oldOptions;
-			p.Errors = oldSink;
+			p.ErrorSink = oldSink;
 		}
 
 		internal Les2Printer(TextWriter target, ILNodePrinterOptions options = null)
@@ -80,18 +80,21 @@ namespace Loyc.Syntax.Les
 			try {
 				int parenCount = WriteAttrs(node, ref context);
 
-				if (node.BaseStyle() == NodeStyle.PrefixNotation)
+				if (!node.IsCall() || node.BaseStyle() == NodeStyle.PrefixNotation)
 					PrintPrefixNotation(node, context);
 				else do {
-					if (node.IsCall()) {
-						if (AutoPrintBracesOrBracks(node))
-							break;
-						int args = node.ArgCount();
-						if (args == 1 && AutoPrintPrefixOrSuffixOp(node, context))
-							break;
-						if (args == 2 && AutoPrintInfixOp(node, context))
-							break;
+					if (AutoPrintBracesOrBracks(node))
+						break;
+					if (!LesPrecedence.Primary.CanAppearIn(context)) {
+						_out.Write("(@[] ", true);
+						parenCount++;
+						context = StartStmt;
 					}
+					int args = node.ArgCount();
+					if (args == 1 && AutoPrintPrefixOrSuffixOp(node, context))
+						break;
+					if (args == 2 && AutoPrintInfixOp(node, context))
+						break;
 					PrintPrefixNotation(node, context);
 				} while (false);
 			
@@ -105,7 +108,7 @@ namespace Loyc.Syntax.Les
 
 		private bool AutoPrintInfixOp(ILNode node, Precedence context)
 		{
-			var prec = GetPrecedenceIfOperator(node, OperatorShape.Infix, context);
+			var prec = GetPrecedenceIfOperator(node, node.Name, OperatorShape.Infix, context);
 			if (prec == null)
 				return false;
 			Print(node[0], prec.Value.LeftContext(context));
@@ -119,15 +122,15 @@ namespace Loyc.Syntax.Les
 		private bool AutoPrintPrefixOrSuffixOp(ILNode node, Precedence context)
 		{
 			Symbol bareName;
-			if (LesPrecedenceMap.IsSuffixOperatorName(node.Name, out bareName, false)) {
-				var prec = GetPrecedenceIfOperator(node, OperatorShape.Suffix, context);
+			if (Les2PrecedenceMap.IsSuffixOperatorName(node.Name, out bareName)) {
+				var prec = GetPrecedenceIfOperator(node, bareName, OperatorShape.Suffix, context);
 				if (prec == null || prec.Value == LesPrecedence.Other)
 					return false;
 				Print(node[0], prec.Value.LeftContext(context));
 				SpaceIf(prec.Value.Lo < _o.SpaceAfterPrefixStopPrecedence);
 				WriteOpName(bareName, node.Target, prec.Value);
 			} else {
-				var prec = GetPrecedenceIfOperator(node, OperatorShape.Prefix, context);
+				var prec = GetPrecedenceIfOperator(node, bareName, OperatorShape.Prefix, context);
 				if (prec == null)
 					return false;
 				var spaceAfter = prec.Value.Lo < _o.SpaceAfterPrefixStopPrecedence;
@@ -154,7 +157,7 @@ namespace Loyc.Syntax.Les
 				target = null; // optimize the usual case
 			if (target != null)
 				PrintPrefixTrivia(target);
-			if (!LesPrecedenceMap.IsNaturalOperator(op.Name))
+			if (!Les2PrecedenceMap.IsNaturalOperator(op.Name))
 				PrintStringCore('`', false, op.Name);
 			else {
 				Debug.Assert(op.Name.StartsWith("'"));
@@ -170,20 +173,19 @@ namespace Loyc.Syntax.Les
 			if (cond) _out.Space();
 		}
 
-		protected LesPrecedenceMap _prec = LesPrecedenceMap.Default;
+		protected Les2PrecedenceMap _prec = Les2PrecedenceMap.Default;
 
-		private Precedence? GetPrecedenceIfOperator(ILNode node, OperatorShape shape, Precedence context)
+		private Precedence? GetPrecedenceIfOperator(ILNode node, Symbol opName, OperatorShape shape, Precedence context)
 		{
 			int ac = node.ArgCount();
 			if ((ac == (int)shape || ac == -(int)shape) && HasTargetIdWithoutPAttrs(node))
 			{
 				var bs = node.BaseStyle();
-				var op = node.Name;
-				bool naturalOp = LesPrecedenceMap.IsNaturalOperator(op.Name);
+				bool naturalOp = Les2PrecedenceMap.IsNaturalOperator(opName.Name);
 				if ((naturalOp && bs != NodeStyle.PrefixNotation) ||
 					(bs == NodeStyle.Operator && node.Name != null))
 				{
-					var result = _prec.Find(shape, op);
+					var result = _prec.Find(shape, opName);
 					if (!result.CanAppearIn(context) || !result.CanMixWith(context))
 						return null;
 					return result;
@@ -519,7 +521,7 @@ namespace Loyc.Syntax.Les
 				_out.Write(quoteType, false);
 				_out.Write(quoteType, false);
 			} else {
-				_out.Write(ParseHelpers.EscapeCStyle(text, EscapeC.Control, quoteType), false);
+				_out.Write(PrintHelpers.EscapeCStyle(text, EscapeC.Control, quoteType), false);
 			}
 			_out.Write(quoteType, true);
 		}
@@ -567,7 +569,7 @@ namespace Loyc.Syntax.Les
 
 		private void PrintShortInteger(object value, NodeStyle style, string type)
 		{
-			Errors.Write(Severity.Warning, null, "LesNodePrinter: Encountered literal of type '{0}'. It will be printed as 'Int32'.", type);
+			ErrorSink.Write(Severity.Warning, null, "LesNodePrinter: Encountered literal of type '{0}'. It will be printed as 'Int32'.", type);
 			PrintIntegerToString(value, style, "");
 		}
 		void PrintValueToString(object value, string suffix)
@@ -635,7 +637,7 @@ namespace Loyc.Syntax.Les
 			object value = node.Value;
 			if (!PrintLiteralCore(value, node.Style))
 			{
-				Errors.Write(Severity.Error, node, "LesNodePrinter: Encountered unprintable literal of type {0}", value.GetType().Name);
+				ErrorSink.Error(node, "LesNodePrinter: Encountered unprintable literal of type {0}", value.GetType().Name);
 
 				bool quote = _o.QuoteUnprintableLiterals;
 				string unprintable;
@@ -707,8 +709,8 @@ namespace Loyc.Syntax.Les
 					SpaceAfterPrefixStopPrecedence = LesPrecedence.SuperExpr.Lo;
 				} else {
 					SpacesBetweenAppendedStatements = true;
-					SpaceAroundInfixStopPrecedence = LesPrecedence.Power.Lo;
-					SpaceAfterPrefixStopPrecedence = LesPrecedence.Prefix.Lo;
+					SpaceAroundInfixStopPrecedence = LesPrecedence.Range.Lo;
+					SpaceAfterPrefixStopPrecedence = LesPrecedence.Range.Lo;
 				}
 			}
 		}
@@ -730,10 +732,10 @@ namespace Loyc.Syntax.Les
 		/// <summary>The printer avoids printing spaces around infix (binary) 
 		/// operators that have the specified precedence or higher.</summary>
 		/// <seealso cref="LesPrecedence"/>
-		public int SpaceAroundInfixStopPrecedence = LesPrecedence.Power.Lo;
+		public int SpaceAroundInfixStopPrecedence = LesPrecedence.Range.Lo;
 
 		/// <summary>The printer avoids printing spaces after prefix operators 
 		/// that have the specified precedence or higher.</summary>
-		public int SpaceAfterPrefixStopPrecedence = LesPrecedence.Prefix.Lo;
+		public int SpaceAfterPrefixStopPrecedence = LesPrecedence.Range.Lo;
 	}
 }

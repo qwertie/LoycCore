@@ -96,18 +96,19 @@ namespace Loyc.Syntax.Les
 			Exact("a + b + 1;",    F.Call(S.Add, F.Call(S.Add, a, b), one));
 			Exact("x * 2 + 1;",    F.Call(S.Add, F.Call(S.Mul, x, two), one));
 			Exact("a = b = 0;",    F.Call(S.Assign, a, F.Call(S.Assign, b, zero)));
-			Exact("a >= b .. c;",  F.Call(S.GE, a, F.Call(S.DotDot, b, c)));
+			Exact("a >= b..c;",    F.Call(S.GE, a, F.Call(S.DotDot, b, c)));
 			Exact("a == b && c != 0;", F.Call(S.And, F.Call(S.Eq, a, b), F.Call(S.Neq, c, zero)));
 			Exact("(a ? b : c);",  F.InParens(F.Call(S.QuestionMark, a, F.Call(S.Colon, b, c))));
 			Exact("a ?? b <= c;",  F.Call(S.LE, F.Call(S.NullCoalesce, a, b), c));
 			Exact("a - b / c**2;", F.Call(S.Sub, a, F.Call(S.Div, b, F.Call(S.Exp, c, two))));
 			Exact("a >>= 1;",      F.Call(S.ShrAssign, a, one));
 			Exact("a.b?.c(x);",    F.Call(S.NullDot, F.Dot(a, b), F.Call(c, x)));
+			Exact("a.b::x.c;",     F.Call(S.ColonColon, F.Dot(a, b), F.Dot(x, c)));
 			
 			// Custom ops
 			Exact("a |-| b + c;",   F.Call("'|-|", a, F.Call(S.Add, b, c)));
-			Exact("a.b!!!c .?. 1;", F.Call("'.?.", F.Call("'!!!", F.Dot(a, b), c), one));
-			Exact("a +/ b *+ c;",   F.Call("'+/", a, F.Call("'*+", b, c)));
+			Exact("a.b!!.c.?.1;",   F.Call("'.?.", F.Call("'!!.", F.Dot(a, b), c), one));
+			Exact("a +/ b *+ c;",   F.Call("'*+", F.Call("'+/", a, b), c));
 		}
 
 		[Test]
@@ -132,15 +133,22 @@ namespace Loyc.Syntax.Les
 					F.Call(S._AddressOf, x)), F.Call(S._Dereference, x)),
 					F.Call(S.Eq, F.Call(S.Not, x), F.Call(S.XorBits, x))));
 			Stmt("| a = %b;", F.Call(S.OrBits, F.Call(S.Assign, a, F.Call(S.Mod, b))));
-			Stmt(".. a + b && c;", F.Call(S.And, F.Call(S.DotDot, F.Call(S.Add, a, b)), c));
+			Stmt("..a + b && c;", F.Call(S.And, F.Call(S.Add, F.Call(S.DotDot, a), b), c));
+			Stmt(@"!! !!a", F.Call(S.PreBangBang, F.Call(S.PreBangBang, a)));
 		}
 
 		[Test]
 		public void SuffixOps()
 		{
-			Stmt("a++ + ++a;", F.Call(S.Add, F.Call(S.PostInc, a), F.Call(S.PreInc, a)));
+			Exact("a++;", F.Call(S.PostInc, a));
+			Exact("a++ + ++a;", F.Call(S.Add, F.Call(S.PostInc, a), F.Call(S.PreInc, a)));
 			Stmt(@"a.b --;", F.Call(@"'--suf", F.Call(S.Dot, a, b)));
 			Stmt(@"a + b -<>-;", F.Call(S.Add, a, F.Call(@"'-<>-suf", b)));
+			// Ensure printer isn't confused by "suf" suffix which also appears on suffix operators
+			Exact(@"`do_suf` x;",  F.Call(@"do_suf", x).SetBaseStyle(NodeStyle.Operator));
+			Exact(@"`'do_suf` x;", F.Call(@"'do_suf", x).SetBaseStyle(NodeStyle.Operator));
+			Exact(@"a!! !!;", F.Call(S.SufBangBang, F.Call(S.SufBangBang, a)));
+			Exact(@"!!a!!;", F.Call(S.PreBangBang, F.Call(S.SufBangBang, a)));
 		}
 
 		[Test]
@@ -190,12 +198,13 @@ namespace Loyc.Syntax.Les
 			Expr("a!(b)", F.Of(a, b));
 			Expr("a!(b, c)", F.Of(a, b, c));
 			Expr("a!()", F.Of(a));
-			Expr("a.b!((x))", F.Of(F.Dot(a, b), F.InParens(x)));
-			Expr("a.b!Foo(x)", F.Call(F.Of(F.Dot(a, b), Foo), x));
-			Expr("a.b!(Foo.Foo)(x)", F.Call(F.Of(F.Dot(a, b), F.Dot(Foo, Foo)), x));
-			Expr("a.b!(Foo(x))", F.Of(F.Dot(a, b), F.Call(Foo, x)));
-			// This last one is meaningless in most programming languages, but LES does not judge
-			Stmt("Foo = a.b!c!x;", F.Call(S.Assign, Foo, F.Of(F.Of(F.Dot(a, b), c), x)));
+			Expr("a.b!((x))", F.Dot(a, F.Of(b, F.InParens(x))));
+			Expr("(@[] a.b)!Foo", F.Of(F.Dot(a, b), Foo));
+			Expr("a.b!Foo",       F.Dot(a, F.Of(b, Foo)));
+			Expr("a.b!Foo(x)", F.Call(F.Dot(a, F.Of(b, Foo)), x));
+			Expr("a.b!(Foo.Foo)(x)", F.Call(F.Dot(a, F.Of(b, F.Dot(Foo, Foo))), x));
+			Expr("a.b!(Foo(x))", F.Dot(a, F.Of(b, F.Call(Foo, x))));
+			Stmt("Foo = a.b!c!x", F.Call(S.Assign, Foo, F.Dot(a, F.Of(b, F.Of(c, x)))));
 		}
 
 		[Test]
@@ -221,6 +230,14 @@ namespace Loyc.Syntax.Les
 			Exact("++[x];", F.Call(S.PreInc, F.Call(S.Array, x)));
 			Exact("Foo = [a, b, c];", F.Call(S.Assign, Foo, F.Call(S.Array, a, b, c)));
 			Exact("Foo = [a, b, c] + [x];", F.Call(S.Assign, Foo, F.Call(S.Add, F.Call(S.Array, a, b, c), F.Call(S.Array, x))));
+		}
+
+		[Test]
+		public void PrecedenceChallenge()
+		{
+			Exact("a.(@[] -b);",    F.Dot(a, F.Call(S._Negate, b)));
+			Exact("a.(@[] -b)(x);", F.Call(F.Dot(a, F.Call(S._Negate, b)), x));
+			Exact("@'::(a.b, x).c;", F.Dot(F.Call(S.ColonColon, F.Dot(a, b), x), c));
 		}
 
 		[Test]
