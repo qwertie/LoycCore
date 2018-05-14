@@ -172,6 +172,6 @@ The other results are pretty much the same as `List<T>`.
 
 ## Download
 
-`InternalList<T>` is part of `Loyc.Essentials.dll`, which is part of the "LoycCore" NuGet package.
+`InternalList<T>` is part of `Loyc.Essentials.dll`, which is in the Loyc.Essentials NuGet package.
 
 You can see the original source code [here](https://github.com/qwertie/LoycCore/blob/master/Loyc.Essentials/Collections/Implementations/InternalList.cs) but it cannot be copied directly into another project since it references a couple of external things in Loyc.Essentials.dll. Therefore, I made this [standalone version](https://gist.github.com/qwertie/7e1461f01b68defbe4bf). Enjoy!

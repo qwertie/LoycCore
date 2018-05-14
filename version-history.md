@@ -26,7 +26,7 @@ LoycCore and LES
   - v2/v3: The precedence of arrow operators like `->` has been lowered. The parser treats their precedence sa above `&&` but below `| ^`
   - v3: Modified the set of continuators.
 
-### v2.6.0 ###
+### v2.6.0: August 30, 2017 ###
 
 #### Loyc.Essentials
 
