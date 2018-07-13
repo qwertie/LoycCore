@@ -293,4 +293,4 @@ Although its speed is merely O.K., `BDictionary<K,V>` is often a better choice t
 
 ## Download!
 
-I am happy to announce a new NuGet package called "LoycCore" which includes all the variants of `AList` as well as other data structures (including `DList`) and various other handy stuff, including most of the stuff I have published articles about in the past. I also created a [new web site for Loyc Core](http://core.loyc.net).
+I am happy to announce a new NuGet package called <s>LoycCore</s> - now called Loyc.Collections - which includes all the variants of `AList` as well as other data structures (including `DList`) and various other handy stuff. I also created a [new web site for Loyc Core](http://core.loyc.net).
