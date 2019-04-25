@@ -145,7 +145,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)' == 'Debug.NET45' or '$(Configuration)' == 'Release.NET45'">
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <TargetFrameworkProfile></TargetFrameworkProfile>
+    <TargetFrameworkProfile>
+    </TargetFrameworkProfile>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Debug.NET45|x86'">
     <DebugSymbols>true</DebugSymbols>
@@ -336,17 +337,17 @@
     <None Include="Resources\WordWrap.png" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Loyc.Collections\Loyc.Collections.csproj">
+    <ProjectReference Include="..\Loyc.Collections\Loyc.Collections.net45.csproj">
       <Project>{7AEEAE63-A63B-4B28-8DB8-0B06B00D1E6A}</Project>
-      <Name>Loyc.Collections</Name>
+      <Name>Loyc.Collections.net45</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Loyc.Essentials\Loyc.Essentials.csproj">
+    <ProjectReference Include="..\Loyc.Essentials\Loyc.Essentials.net45.csproj">
       <Project>{DF642FB7-25EB-424D-8E92-6C046F42D4A9}</Project>
-      <Name>Loyc.Essentials</Name>
+      <Name>Loyc.Essentials.net45</Name>
     </ProjectReference>
-    <ProjectReference Include="..\Loyc.Utilities\Loyc.Utilities.csproj">
+    <ProjectReference Include="..\Loyc.Utilities\Loyc.Utilities.net45.csproj">
       <Project>{94BC16E0-2F14-4747-82F8-CFA22AD558CA}</Project>
-      <Name>Loyc.Utilities</Name>
+      <Name>Loyc.Utilities.net45</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
