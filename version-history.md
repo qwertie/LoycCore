@@ -3,12 +3,48 @@ title: "Version history"
 tagline: "Gathered from commit messages. Trivial changes omitted."
 layout: page
 ---
-LoycCore and LES
-----------------
+LoycCore and [LES](http://loyc.net/les)
+------------------
+
+### v2.6.8: May 12, 2019 ###
+
+- Introduced .NET Standard 2.0 versions. NuGet package now contains four builds: .NET 3.5, .NET 4.0, .NET 4.5 and .NET Standard 2.
+
+### v2.6.7: March 17, 2019 ###
+
+- LES: Make `* /` and `<< >>` miscible. Precedence of `<< >>` is between `+ -` and `* /` so `x << 1 - 1` means `(x << 1) - 1`.
+- LES: Keep `& | ^` immiscible with `== != > <`, but give them higher precedence than comparison operators in LES3 only.
+
+### v2.6.6: March 16, 2019 ###
+
+- Loyc.Syntax issue #61: `%` is now recognized as a trivia marker by `CodeSymbols.IsTriviaSymbol`, `LNode.IsTrivia`, `LNodeExt.IsTrivia`.
+- LES: Add triangle operators `|> <|`
+- LES bug fix: fix precedence of `..<` to match `..`
+- LES3: Allow nonparenthesized attributes to have an argument list (e.g. `@attr(args) expr`)
+
+### v2.6.5: February 17, 2019 ###
+
+Loyc.Syntax:
+
+- Design fix: Change `ILNode.Target` to have a more appropriate return type.
+- Added convenience method for printing `ILNode` in `Les2LanguageService` and `Les3LanguageService`
+
+### v2.6.4: September 18, 2018 ###
+
+- Loyc.Collections: Add support for priority queues: `MinHeap`, `MaxHeap`, `MinHeapInList`, `MaxHeapInList`.
+
+### v2.6.3: July 23, 2018 ###
+
+Loyc.Syntax:
+
+- Edit the default token-to-string method `TokenExt.ToString()` so it works more sensibly on non-LES tokens that are still based on `TokenKind`.
+- Swap int value of `TokenKind.Spaces` with `TokenKind.Other` so that lexers oblivious to `TokenKind` will typically have integer values in the `TokenKind.Other` region.
+- `Token.ToSourceRange` and `Token.Range` were duplicate methods; removed the first.
 
 ### v2.6.2: October 1, 2017 ###
 
 - LESv3: Tweaked the precedence of `->` and `<-`. These operators can now be mixed with logical and bitwise operators (`|`, `&&`, `|`, `^` , `&`, `==`, `>`, etc.) and are right-associative.
+- v2.6.2.1: Bug fix in `SparseAList.NextHigherItem`, `NextLowerItem` when `index` is negative or `int.MaxValue`.
 
 ### v2.6.1: September 28, 2017 ###
 
