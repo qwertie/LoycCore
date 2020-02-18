@@ -6,6 +6,112 @@ layout: page
 LoycCore and [LES](http://loyc.net/les)
 ------------------
 
+### v2.7.0.3: February 17, 2020 ###
+
+This is a transitionary release: it is probably the last release before support for .NET 3.5 and .NET 4 is dropped. It contains a bunch of breaking changes, most notably the fact that you need to add a reference to Loyc.Interfaces.dll. There will be some additional breaking changes in v2.8.0.
+
+#### Regularization of collection interfaces
+
+Several changes were made to the collection interfaces to make the set more complete, consistent and useful.
+
+Each of the three common types of collection (collection, list, dictionary) now has 3-4 interfaces:
+
+1. "AndReadOnly" interfaces (`IListAndReadOnly<T>`, `ICollectionAndReadOnly<T>`, `IDictionaryAndReadOnly<K,V>`) are to be implemented by read-only sequences that want to implement the writable interface (`IList<T>`, `IDictionary<K,V>`) for compatibility reasons.
+2. "AndSource" interfaces (`ICollectionAndSource<T>`, `IListAndListSource<T>`) implement "AndReadOnly" (e.g. `IListAndListSource<T>` implements `IListAndReadOnly<T>`) but include an enhanced Loyc interface (`IListSource<T>` is the enhanced version of `IReadOnlyList<T>` and `ICollectionSource<T>` is the enhanced version of `IReadOnlyCollection<T>`).
+3. An "Impl" interface (`IListImpl<T>`, `ICollectionImpl<T>`, `IDictionaryImpl<K, V>`) is the main interface that editable Loyc collection types should implement.
+4. Extended interfaces (`ICollectionEx<T>`, `IListEx<T>`, `IDictionaryEx<T>`) are variations that add extra functionality to allow sophisticated collection types to offer higher performance for some operations.
+
+Categories 1-3 exist mainly for the purpose of disambiguation and you should generally NOT create variables of these types, as explained in the [documentation of `IListImpl<T>`](http://ecsharp.net/doc/code/interfaceLoyc_1_1Collections_1_1IListImpl.html).
+
+#### Loyc.Interfaces.dll
+
+Added Loyc.Interfaces.dll (available on NuGet) to hold (almost) all interfaces defined in Loyc.Essentials.dll, Loyc.Syntax.dll, etc. Aside from interfaces, enums, and delegates, it also contains a small number of essential structs and classes, most notably `Symbol`, `UString`, `Maybe<T>`, and `Localize`. These are types that the interfaces refer to, or that the concrete types themselves depend on. This new library allows you to use Loyc interfaces without taking a dependency on the heavier Loyc.Essentials library. However, this initial release is heavier than I would like at 84KB, as it includes some concrete types that I would rather not include (they are included because `Symbol`, `UString`, `Maybe<T>`, and/or `Localize` depend on them, directly or indirectly). Some of these types will be moved back to Loyc.Essentials in a future version.
+
+- Marked `IAddRange` and `IListRangeMethods` as `<in T>`.
+- Added `ICollectionSource<T>` and added it as a base of `ISetImm`
+- Added `ICollectionAndReadOnly<T>`, `IListAndReadOnly<T>`, `IDictionaryAndReadOnly<T>`
+- Added `ICollectionAndSource<T>`
+- Added `IDictionaryEx` interface
+- Added `IOptimize` as common subinterface of `IAutoSizeArray<T>` and `INegAutoSizeArray<T>`
+- `IListAndListSource<T>` now includes `ICollectionSource<T>` (which has `CopyTo` and `Contains` methods.)
+
+#### Loyc.Essentials
+
+Changes that are most likely to be breaking:
+
+- Rename `BaseDictionary` to `DictionaryBase` for consistency.
+- Eliminated `StringSlice` (`UString` now implements its interface, `IRange<char>`)
+- A new namespace [`Loyc.Collections.MutableListExtensionMethods`](http://ecsharp.net/doc/code/namespaceLoyc_1_1Collections_1_1MutableListExtensionMethods.html) has been added specifically to contain extension methods for `ICollection<T>` and `IList<T>` that are possibly ambiguous when included in the same namespace as extension methods for `IReadOnlyCollection<T>` and `IReadOnlyList<T>`. This is needed due to a design flaw in .NET and C#. [Issue #84](https://github.com/qwertie/ecsharp/issues/84) describes the problem in more detail. Most of the extension methods in this namespace are likely to be deprecated soon.
+
+Other changes:
+
+- Removed `ICollectionEx<T>.RemoveAll` which works well enough as an extension method (none of the existing collection types accelerate it, though AList could theoretically do so)
+- Added extension methods for `IDictionary` and `IDictionaryEx`: `GetAndRemove`, `AddRange` with `DictEditMode` parameter
+- Added `SetExt` extension methods for `ISet<K>`
+- Added `IDictionarySink` and `IDictionaryAndReadOnly`.
+- Added extension method `AddIfNotPresent` for `IList<T>`
+- Added extension method `AsReadOnlyDictionary`  with `SelectDictionaryFromKeys` adapter
+- Added extension methods for `IDictionary<K,V>`: `TryGetValue(K key)`, `AddRange`, `SetRange`, `RemoveRange`
+- Added more `LinqToLists.Select` extension methods for `ICollection`/`IReadOnlyCollection`, with corresponding adapters `SelectCollection` and `SelectReadOnlyCollection`.
+- Edit `BDictionary` and `MMap` to support `IDictionaryEx`.
+- Edit `InvertibleSet` to support new `CopyTo` method.
+- Added `ByteArrayInString` class, which encodes and decodes BAIS (Byte Array In String) encoding. BAIS preserves runs of ASCII characters unchanged. It is useful for debugging (since ASCII runs are visible) and for conversion of bytes to JSON.
+- Added `G.DecodeBase64Digit`, `G.EncodeBase64Digit`.
+- Added overloads of `TryPopFirst` and `TryPopLast` in `UString` and `RangeExt`.
+
+#### Loyc.Collections:
+
+- `BMultiMap` now accepts `null` values for the key and value comparator. A null key comparer means "use the default key comparer", while a null value comparer means "pretend all values are equal". If you use the `(null, null)` constructor, you should avoid calling `this[key].Remove(value)` or `this[key].Contains(value)`, since these methods will treat _any_ value as a match.
+
+#### Loyc.Syntax:
+
+- Replaced `#trivia_` prefix with `%` ([issue #61](https://github.com/qwertie/ecsharp/issues/61))
+- LES2 and LES3 precedence tables have changed ([issue #87](https://github.com/qwertie/ecsharp/issues/87))
+- LES3: Support `:` as prefix operator (not supporting it earlier was accidental)
+- LES3: Add `initially` (alongside `finally`) as a continuator
+- Added `LNode.FlattenBinaryOpSeq()` 
+- Added `CodeSymbols.Matches` (`'=~` operator)
+- Rename `#usingCast` to `'using` (`CodeSymbols.UsingCast`)
+- Rename `#namedArg` to `'::=` (alternate name: `<:`) (the name `CodeSymbols.NamedArg` is unchanged)
+- Rename `#of` to `'of` (`CodeSymbols.Of`) ([issue #96](https://github.com/qwertie/ecsharp/issues/96))
+- Rename `#tuple` to `'tuple` (`CodeSymbols.Tuple`) ([issue #96](https://github.com/qwertie/ecsharp/issues/96))
+- Rename `#is/#as/#cast` to `'is/'as/'cast`  (`CodeSymbols.Is/As/Cast`) ([issue #96](https://github.com/qwertie/ecsharp/issues/96))
+- Rename `#default` to `'default`  (`CodeSymbols.Default`) even for the label form, `default:` ([issue #96](https://github.com/qwertie/ecsharp/issues/96))
+- Rename `#sizeof/#typeof` to `'sizeof/'typeof` (`CodeSymbols.Sizeof/Typeof`)
+- Rename suffix operators (`x[], x++, x--`) to have a consistent prefix of `'suf` ([issue #96](https://github.com/qwertie/ecsharp/issues/96))
+- Rename `CodeSymbols.Neq→NotEq`, `NodeStyle.Statement→StatementBlock`
+- Split `#new` into `'new` operator and `#new` attribute (`CodeSymbols.New` and `CodeSymbols.NewAttribute`)
+- Split `#switch` into `'switch` operator and `#switch` statement. `CodeSymbols.Switch` was split into `CodeSymbols.SwitchStmt` and `CodeSymbols.SwitchExpr`. Note: EC# parser does not yet support the switch expression.
+- Increase block size in `BaseLexer`, mainly to reduce branch mispredictions
+- Deleted `IToLNode`. `ILNode.ToLNode` is now an extension method only, not a core part of the interface.
+
+### v2.6.9: January 21, 2020 ###
+
+Loyc.Essentials:
+
+- Enable compiler optimizations (oops)
+
+Loyc.Collections:
+
+- ALists:
+  - Added `CountSizeInBytes()` methods in all variants of AList (see also `ListBenchmarks.CountSizeInBytes` methods implemented for `List<T>, Dictionary<K,V>, SortedDictionary<K,V>`, and `LinkedList<T>`)
+  - Added convenience method `SparseAList<T>.AddSpace(count)`
+  - `AList` and `SparseAList`: Change how node splitting works for better bulk-add performance. Specifically, when splitting to add an item to the end of a node, the new left node will be 100% full and the right node will contain only one item, so that repeated calls to Add will naturally build a sequence of full nodes.
+  - Optimize AList insertions by redistributing adjacent children in bulk
+  - Optimize `AList.AddRange`
+  - Optimize `AList<T>.this[index]` for small lists
+  - Switch internal list from `InternalDList` to `InternalList` (`InternalDList` may have slightly faster insert/remove, but other operations are faster, most importantly `this[int]`.)
+  - Default inner node size is now 64 to match leaf size
+  - Node classes: Add debug/test properties `Children` and `Leaves`
+  - Hide unimportant properties in debugger
+- Optimize enumerators of InternalList, InternalDList and AList
+  - InternalList: `yield return` measured to be slow. Avoided it.
+  - DList/AList: Factor out "rare" parts to encourage inlining.
+
+Loyc.Utilities:
+
+- Add `AListSumTracker` and `AListStatisticTracker` classes with extension methods on `AListBase<K,T>`
+
 ### v2.6.8: May 12, 2019 ###
 
 - Introduced .NET Standard 2.0 versions. NuGet package now contains four builds: .NET 3.5, .NET 4.0, .NET 4.5 and .NET Standard 2.
