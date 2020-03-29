@@ -6,9 +6,20 @@ layout: page
 LoycCore and [LES](http://loyc.net/les)
 ------------------
 
-### v2.7.0.3: February 17, 2020 ###
+### v2.7.1.4: March 29, 2020 ###
 
-This is a transitionary release: it is probably the last release before support for .NET 3.5 and .NET 4 is dropped. It contains a bunch of breaking changes, most notably the fact that you need to add a reference to Loyc.Interfaces.dll. There will be some additional breaking changes in v2.8.0.
+This is probably the last release before support for .NET 3.5 and .NET 4 is dropped.
+
+- Belatedly added `Either<L,R>`, a struct that holds "one" of two types (really both, with a boolean indicating which one.) Should've added this years ago. The `Left` and `Right` properties return a `Maybe<L>` and `Maybe<R>` respectively, and there's a `Value` property that returns either `Left.Value` or `Right.Value` as appropriate. Also added interface `IEither<L,R>`.
+- Add `ROLSlice<TList,T>` for slicing `IReadOnlyList<T>` types. This is an improvement over Slice_<T> which can't slice BCL lists.
+- Add `ILineAndColumn`, `ILineColumnFile`, and `ISourceRange` which will be used in breaking changes in v2.8.0. Specifically, the `IIndexToLine`, `IIndexPositionMapper`, `ISourceFile` and `ILNode` interfaces will returns these interfaces instead of the concrete types `LineAndCol`, `SourcePos`, and `SourceRange`.
+- Renamed `AbstractTriviaInjector.AttachTriviaTo` to `GetAttachedTrivia`. Technically it's a breaking change, but in a location obscure enough that probably no one is affected.
+
+### v2.7.0.4: March 10, 2020 (re-release of 2.7.0.3) ###
+
+There are a bunch of breaking changes here, most notably the fact that you need to add a reference to Loyc.Interfaces.dll. This is also a transitionary release: more breaking changes will occur in v2.8.0.0 (semantic version 28.0.0), and it's probably wise to upgrade just one semantic version at a time.
+
+Apologies: the new Loyc.Interfaces package was broken in NuGet in v2.7.0.3
 
 #### Regularization of collection interfaces
 
