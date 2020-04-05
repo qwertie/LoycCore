@@ -6,6 +6,14 @@ layout: page
 LoycCore and [LES](http://loyc.net/les)
 ------------------
 
+### v2.7.2: April 4, 2020 ###
+
+- Add `IMaybe<T>` and tweak the new `IEither<L,R>` interface to use it, so that generic variance works with the interface.
+- Added static `Either<ToL,ToR>.From(Either<L,T>)` method for achieving variance without using the interface. Also added `Select()` for more complicated conversions.
+- Tweaked return type of `ArraySlice<T>.GetEnumerator` for likely higher efficiency
+- Tweaked type of `EmptyEnumerator<T>.Empty` to be `IEnumerator<T>` to help C# choose the correct type when it is used with the `? :` operator.
+- Fix potential overflow in `Statistic.Variance()`
+
 ### v2.7.1.4: March 29, 2020 ###
 
 This is probably the last release before support for .NET 3.5 and .NET 4 is dropped.
