@@ -7,23 +7,31 @@ You can make "sets" in the .NET framework with the standard [`HashSet<T>`](https
 
 To demonstrate this, consider how easy it is to pass one number to a method:
 
-    Method(42.0);
+~~~cs
+Method(42.0);
+~~~
 
 Passing a set of numbers isn't too difficult, though it's clearly not as smooth:
 
-    Method(new HashSet<double> { 0.25, 0.5, 1.0, 2.0 });
+~~~cs
+Method(new HashSet<double> { 0.25, 0.5, 1.0, 2.0 });
+~~~
 
 There are some significant difficulties though. First, if you want to pass the same set to multiple functions, we might have a problem...
 
-    var set = new HashSet<double> { 0.25, 0.5, 1.0, 2.0 };
-    Method1(set);
-    Method2(set);
+~~~cs
+var set = new HashSet<double> { 0.25, 0.5, 1.0, 2.0 };
+Method1(set);
+Method2(set);
+~~~
 
 What's wrong with this? Well, a `HashSet` is mutable. That means `Method1` or `Method2` is free to modify our set. If that's what we _want_, great. But if not, we have to check the documentation of `Method1` and `Method2` to see if they might modify the set, and if they do, we have to make a copy of the set. This is not convenient to do, either; since there is no clone method, we have to call the copy constructor instead, which means repeating the data type with each copy:
 
-    HashSet<double> set = new HashSet<double> { 0.25, 0.5, 1.0, 2.0 };
-    Method1(new HashSet<double>(set));
-    Method2(new HashSet<double>(set));
+~~~cs
+HashSet<double> set = new HashSet<double> { 0.25, 0.5, 1.0, 2.0 };
+Method1(new HashSet<double>(set));
+Method2(new HashSet<double>(set));
+~~~
 
 And this is a waste of time and memory in case the methods _do not_ modify the sets.
 
@@ -36,34 +44,40 @@ First I will show you why these sets are easier to use, and then I will demonstr
 
 First, let's see Loyc's immutable `Set` type in action:
 
-    Set<double> set = new MSet<double> { 0.25, 0.5, 1.0, 2.0 }.AsImmutable();
-    Method1(set);
-    Method2(set);
+~~~cs
+Set<double> set = new MSet<double> { 0.25, 0.5, 1.0, 2.0 }.AsImmutable();
+Method1(set);
+Method2(set);
+~~~
 
 <div class="sidebox"><b>Note</b>: currently `Set` is a value type, so happily `AsImmutable` does not allocate any memory, but I'm considering whether it should be a reference type instead, since the other three types (`MSet`, `Map` and `MMap`) are already reference types. By the way, I may add a `params` constructor in the future so you can write `new Set&lt;double>(0.25, 0.5, 1.0, 2.0)`, avoiding the need to call `AsImmutable()`. Alternately, I might define a new `static class Set` so you can write simply `Set.New(0.25, 0.5, 1.0, 2.0)`, but in the meantime, you could always write that class yourself if you need an easy way to make sets.</div>
 Here, we start with `MSet<double> {...}` in order to use the `{...}` notation (C# calls the `Add()` method of `MSet`, which does not exist in `Set`) and then we call `AsImmutable` to create an immutable version of the set. Since `Set` is immutable, we know—without consulting any documentation—that `Method1` and `Method2` won't modify our set.
 
 Now let's consider what we have to do if we want to pass the combination of two sets, or exclude one set from another:
 
-    var set1 = new HashSet<double> { 0.25, 0.5, 1.0, 2.0 };
-    var set2 = new HashSet<double> { 2, 3, 5, 7, 11 };
+~~~cs
+var set1 = new HashSet<double> { 0.25, 0.5, 1.0, 2.0 };
+var set2 = new HashSet<double> { 2, 3, 5, 7, 11 };
     
-    // pass the union (combined set) to Method1, and the difference to Method2
-    var combined = new HashSet<double>(set1);
-    combined.UnionWith(set2);
-    Method1(new HashSet<double>(combined));
-    var difference = new HashSet<double>(set1);
-    difference.ExceptWith(set2);
-    Method2(new HashSet<double>(difference));
+// pass the union (combined set) to Method1, and the difference to Method2
+var combined = new HashSet<double>(set1);
+combined.UnionWith(set2);
+Method1(new HashSet<double>(combined));
+var difference = new HashSet<double>(set1);
+difference.ExceptWith(set2);
+Method2(new HashSet<double>(difference));
+~~~
 
 Surely, though, this could be much more convenient. And with Loyc's `Set` type, it is!
 
-    var set1 = new MSet<double> { 0.25, 0.5, 1.0, 2.0 }.AsImmutable();
-    var set2 = new MSet<double> { 2, 3, 5, 7, 11 }.AsImmutable();
-    
-    // pass the union (combined set) to Method1, and the difference to Method2
-    Method1(set1 | set2);
-    Method2(set1 - set2);
+~~~cs
+var set1 = new MSet<double> { 0.25, 0.5, 1.0, 2.0 }.AsImmutable();
+var set2 = new MSet<double> { 2, 3, 5, 7, 11 }.AsImmutable();
+
+// pass the union (combined set) to Method1, and the difference to Method2
+Method1(set1 | set2);
+Method2(set1 - set2);
+~~~
 
 You can use the `set1 | set2` to merge sets, `set1 & set2` to compute an intersection (items that exist in both sets), `set1 ^ set2` gets the exclusive-or (items that are in one set but not the other), and `set1 - set2` starts with a copy of `set1` and "subtracts" (removes) all items that are in `set2`. Finally, you and use `+` and `-` to add or remove a single item (e.g. `set2 + 13.0` creates a new set that contains `13.0`, leaving the original `set2` unchanged.)
 
