@@ -6,6 +6,99 @@ layout: page
 LoycCore and [LES](http://loyc.net/les)
 ------------------
 
+### v2.8.0: July 3, 2020 ###
+
+#### Potentially breaking changes:
+
+General:
+- .NET 3.5 and .NET 4 versions have been dropped, leaving .NET 4.5 and .NET Standard versions.
+
+Loyc.Interfaces:
+- Introduce `IIndexed<K,V>` and include it as a base interface of `IListSource<T>` and `IDictionaryAndReadOnly<K,V>`. It is also included indirectly in `IDictionaryEx<,>` and `IDictionaryImpl<,>`.
+- Add `ITryGet<in K, out V>` and use it all over
+    - `IListSource<T>` now implements `ITryGet<int, T>, IIndexed<int, T>`. This may break existing explicit interface implementations.
+    - `INegListSource<T>` now implements `ITryGet<int, T>, IIndexed<int, T>` This may break existing explicit interface implementations.
+    - `IDictionaryEx<K,V>` now implements `ITryGet<K,V>` (and its base interface `IDictionaryAndReadOnly<K,V>` implements `IIndexed<K,V>`). This may break existing implementations.
+- Change `IIndexToLine`, `IIndexPositionMapper`, and `ILNode` to use new interfaces `IHasFileName`, `ISourceRange`, `ILineAndColumn`, and `ILineColumnFile`
+    - This allowed `SourceRange` to be moved from Loyc.Interfaces back to Loyc.Syntax
+    - This change also breaks implementors of `ISourceFile`
+
+Loyc.Essentials:
+- Move disambiguating `TryGet<T>(this IListAndListSource<T> list...)` extension methods to `MutableListExtensionMethods` namespace
+
+Loyc.Syntax:
+- Introduced `LNodeList` to replace `VList<LNode>` ([#100](https://github.com/qwertie/ecsharp/issues/100)) with automatic implicit conversions between the old and new collection types to minimize breakage. `LNodeList` is currently a wrapper around `VList<LNode>`, but the implementation could (of course) change later.
+- Rename `CodeSymbols.PtrArrow` to `RightArrow` (old name marked Obsolete)
+- Rename `CodeSymbols._RightArrow` to `RightArrow` (old name marked Obsolete)
+- Rename `LineAndCol`, `SourcePos`, `SourcePosAndIndex`
+    - Introduce derived class `LineAndColumn` as new name for `LineAndCol`
+    - Introduce derived class `LineColumnFile` as new name for `SourcePos`
+    - Introduce derived class `LineColumnFileAndIndex` as new name for `SourcePosAndIndex`
+- `ISourceRange.Start` and `ISourceRange.End` became extension methods instead of properties, due to limitations of standard C# + 4.5 Framework (on Core I would've used default-implemented properties)
+- `LNodeFactory.Literal(null)` now produces a compiler (ambigity) error; use `LNodeFactory.Null` instead
+- `IParsingService` now accepts `IParsingOptions` instead of `ParsingMode mode = null, bool preserveComments = true` arguments. Extension methods have been added to replace the old methods, so existing users should recompile successfully, but if there are any external implementations, they will break.
+
+#### Changes to LES3 (beta):
+
+- Arbitrary acyclic graphs are supported by the parser ([#75](https://github.com/qwertie/ecsharp/issues/75)). There is still no support in the printer.
+    - `@@double-at-literals` have been removed since `@@` now means "backreference". `@@inf.d` is now `_d"inf"`, `@@nan.f` is now `_f"nan"`, etc.
+- Custom numeric literals in LES3 now implicitly add an underscore to the beginning of their type marker ([#76](https://github.com/qwertie/ecsharp/issues/76))
+- Allow keyword-expressions begin with a comma-separated list of expressions ([#85](https://github.com/qwertie/ecsharp/issues/85))
+- Add support for line continuator `|` (parser only) ([#86](https://github.com/qwertie/ecsharp/issues/86))
+- Raised precedence of `**` above prefix operators, to match Python ([#87](https://github.com/qwertie/ecsharp/issues/87))
+- Add support for prefix and suffix unary operators marked with apostrophes ([#106](https://github.com/qwertie/ecsharp/issues/106))
+- Add support for backquote suffix operators (shorthand for binary IS operator) ([#106](https://github.com/qwertie/ecsharp/issues/106))
+    - Consequently, `` 123`foo` `` is no longer a valid number format
+- Eliminated keyword tokens so that `a .b!T` can parse ([#108](https://github.com/qwertie/ecsharp/issues/108))
+- Rearrange lexer to allow `true`, `false` and `null` as type markers, which makes it slightly simpler
+- Bug fix: for proper round-tripping, `%appendStatement` attribute should not cause a statement to be appended if the printer was given the `PrintTriviaExplicitly` flag
+- Move `Les3PrinterOptions` and `TokenTree` to separate files.
+- Tweak grammar of `MLComment` so that an unclosed multiline comment cannot be treated as an operator.
+
+#### Changes to LES2 precedence table, matching changes in LES3:
+
+- Raised precedence of `**` above prefix operators, to match Python ([#87](https://github.com/qwertie/ecsharp/issues/87))
+- Raised precedence of `..` above multiplication operator, to match C# ([#87](https://github.com/qwertie/ecsharp/issues/87))
+- A backquoted unary operator whose name start with an apostrophe will pick up the same precedence that it has in LES3.
+
+#### Other changes:
+
+Loyc.Interfaces:
+- Add `ISerializedLiteral` to represent a serialized text form of a literal value (`TextValue` and `TypeMarker` properties)
+- Add `ILiteralValue` which adds an `object Value` property to `ISerializedLiteral`
+- `ILNode` (and `LNode`) now includes `ILiteralValue` (`TextValue` and `TypeMarker` properties)
+- `IEither<L,R>`: added two `Maybe.Or` extension methods and two `Maybe.Then` extension methods
+- `Either<L,R>`: added `Or(T defaultValue)` method
+- Add `UString.IsNull` property
+- Rename `LCExt` in `Loyc.Interfaces` to `CollectionSource` to avoid causing ambiguity errors when referring to `LCExt`, which also exists in `Loyc.Essentials`
+- Optimize conversion from `UString` to `Symbol`
+- Add `EmptySourceFile.Synthetic` and mark `EmptySourceFile.Default` as Obsolete.
+
+Loyc.Essentials:
+- `DictionaryExt`: added `GetOrAdd` and `AddOrUpdate` extension methods for `IDictionary<,>` that behave like the synonymous methods in `ConcurrentDictionary`
+- `LinqToLists`: Add `ConcatNow()` methods
+- `StringExt.FormatCore`: a recent change to `Localize` broke this method in the case that it is used as the `Localize.Formatter` and you call something like `"Hello {name}".Localize("name", "Joe")`. The problem is that for the sake of its own simplicity, `Localize` rounds up the number of arguments to 3 so that `FormatCore` always receives at least 3 arguments. `FormatCore` was programmed to assume the last N arguments are name-value pairs for some even number N. If you wrote `"{0} {name}".Localize(1, 2, "name", "Joe")`, for example, since there is a numeric argument {0} and 4 arguments total, it would assume the named arguments start at index 2. This round-up behavior has been removed. Instead, now it is simply assumes that the first named argument appears after all the numeric
+  ones; if the number of remaining arguments is odd then the last argument is simply ignored.
+
+Loyc.Collections:
+- Cancel obsolescence of `BDictionary.AddIfNotPresent` since it actually provides more functionality than the `GetOrAdd` extension method (i.e. its boolean result)
+- `Bijection<,>`: implement `IDictionaryImpl` instead of `IDictionaryAndReadOnly` , thus including `IDictionarySink`
+- Cancel obsolescence of `BDictionary.AddIfNotPresent` since it actually provides more functionality than the `GetOrAdd` extension method (i.e. its boolean result)
+- In `BDictionary` and `DictionaryExt` (`IDictionary` extension method): renamed `SetAndGet` to `GetAndSet` to help convey a sense that it gets the old value before overwriting it.
+- Implement `ITryGet<K, V>` in a few collections (sometimes implicitly via `IListSource<T>` or `IDictionaryEx<K,V>`)
+- Also implement `IIndexed<K,V>` on several collections (this required no new methods, since collections already have indexers)
+- Methods of the form `TryGet(K k, ref V v)` are now deprecated ([Obsolete])
+- Remove a few implementations of `TryGet` that are no longer needed (or weren't really needed in the first place)
+
+Loyc.Syntax:
+- Various APIs now generally refer to `LNodeList` instead of `VList<LNode>` and `matchCode` macro now emits references to `LNodeList` instead of `VList<LNode>`.
+- `SourceRange.ToString` now prints line/column numbers, to improve the default way that message sinks print locations in source code.
+- LES3 parser now records the fact that literals are hex or binary ([#46](https://github.com/qwertie/ecsharp/issues/))
+- Add `ILiteralValueProvider` and public implementations `LiteralValue` and `ParsedValue`. There is also an internal implementation `SimpleValue<V>` which is used for simple literals that are instantiated with a value V and no source text.
+- Added new overloads of `LNode.Literal(...)`
+- Add `IParsingOptions`, `ParsingOptions`
+- **Note:** `CustomLiteral` will be deprecated soon. `LNode` itself now includes `TypeMarker` and `TextValue` properties which eliminate the need for it. Use the new overloads of `LNode.Literal()` that accept `ILiteralValueProvider` or `LiteralValue` to produce nodes that provide values in the new properties.
+
 ### v2.7.2: April 4, 2020 ###
 
 - Add `IMaybe<T>` and tweak the new `IEither<L,R>` interface to use it, so that generic variance works with the interface.
@@ -15,8 +108,6 @@ LoycCore and [LES](http://loyc.net/les)
 - Fix potential overflow in `Statistic.Variance()`
 
 ### v2.7.1.4: March 29, 2020 ###
-
-This is probably the last release before support for .NET 3.5 and .NET 4 is dropped.
 
 - Belatedly added `Either<L,R>`, a struct that holds "one" of two types (really both, with a boolean indicating which one.) Should've added this years ago. The `Left` and `Right` properties return a `Maybe<L>` and `Maybe<R>` respectively, and there's a `Value` property that returns either `Left.Value` or `Right.Value` as appropriate. Also added interface `IEither<L,R>`.
 - Add `ROLSlice<TList,T>` for slicing `IReadOnlyList<T>` types. This is an improvement over Slice_<T> which can't slice BCL lists.
