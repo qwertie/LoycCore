@@ -6,6 +6,22 @@ layout: page
 LoycCore and [LES](http://loyc.net/les)
 ------------------
 
+### v2.8.1: July 6, 2020 ###
+
+Loyc.Essentials:
+- Add `G.Do<T, R>(this T obj, Func<T, R> action)` extension method for running a statement or block of statements inside an expression.
+- Add `string` extension methods `WithoutPrefix` and `WithoutSuffix` for trimming off a specific prefix or suffix (if found) from a string.
+
+Loyc.Collections:
+- The `SmartSelectMany` methods of `FWList`, `VList`, `WList` now accept `IReadOnlyList<>` instead of `IList<>` in order to enable   new APIs in `LNode`. Technically these changes are breaking but in practice, VLists have few users so breakage should be minimal, and the change seems justifiable since most collections implement both interfaces (IList and IReadOnlyList) and `LNode` is the main user of
+  `VList`.
+- The `AddRange` and `InsertRange` methods in `FWList`, `VList`, and `WList` now accept `IReadOnlyList<>` instead of `IList<>`, as a
+  necessary side effect of the change to `SmartSelectMany`.
+
+Loyc.Syntax:
+- Added new `SelectMany` and `RecursiveReplace` methods in `LNode`. There are now confusingly similar methods `RecursiveReplace` and this `ReplaceRecursive`. The reason for this confusing situation is that if the old method and the new method have the same name, the lambda you pass to it may be ambiguous between the two methods and cause a compiler error, so the names need to be different somehow to avoid this annoyance.
+- `LNodeList.InsertRange` and `LNodeList.AddRange` now accept `IReadOnlyList<>` instead of `IList<>`.
+
 ### v2.8.0: July 3, 2020 ###
 
 #### Potentially breaking changes:
