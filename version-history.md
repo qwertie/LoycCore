@@ -6,6 +6,12 @@ layout: page
 LoycCore and [LES](http://loyc.net/les)
 ------------------
 
+### v2.8.2: July 24, 2020 ###
+
+Loyc.Syntax:
+- Add `ParsingOptions` class to implement `IParsingOptions` (it was unintentionally `internal` in the previous release)
+- `LNodeList.AddRange` now accepts `IReadOnlyList<>`. It unintentionally accepted `IList<>` in the previous release.
+
 ### v2.8.1: July 6, 2020 ###
 
 Loyc.Essentials:
