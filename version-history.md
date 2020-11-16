@@ -6,6 +6,11 @@ layout: page
 LoycCore and [LES](http://loyc.net/les)
 ------------------
 
+### v2.8.2.1: November 16, 2020 ###
+
+Loyc.Math:
+- Bug fix: `ComputeConvexHull` returned nothing if the input was a single point; it now returns that point.
+
 ### v2.8.2: July 24, 2020 ###
 
 Loyc.Syntax:
