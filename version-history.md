@@ -6,10 +6,20 @@ layout: page
 LoycCore and [LES](http://loyc.net/les)
 ------------------
 
-### v2.8.2.1: November 16, 2020 ###
+### v2.8.3: November 16, 2020 ###
+
+Loyc.Interfaces:
+- Bug fix: `default(UString).ToString()` no longer throws `NullReferenceException`
+
+Loyc.Essentials:
+- Add `G.WordWrap` functions, which break a paragraph into lines using a simple word-wrapping algorithm. There are two overloads, one of which supports variable-width characters. Also added a default character categorization strategy `G.GetWordWrapCharType`
 
 Loyc.Math:
 - Bug fix: `ComputeConvexHull` returned nothing if the input was a single point; it now returns that point.
+
+Loyc.Syntax:
+- Add `<>` operator to LES (#87)
+- Added `LNodeExt` extension methods: `LNode.Unsplice`, `LNodeList.IncludingAttributes`, `LNode.IncludingTriviaFrom`. In macros, `IncludingTriviaFrom` should be used to copy comments and newlines from the original macro call to the output code.
 
 ### v2.8.2: July 24, 2020 ###
 
