@@ -230,7 +230,10 @@ So `AList` crushes all. When the list is small, however, `AList<T>` is not the c
 ![Results](bm-insert-at-random-indexes-.png)
 ![Results](bm-remove-at-random-indexes-.png)
 
-In fact, for small lists (under 100 items), `List<T>` is about twice as fast.
+In fact, for small lists (under 100 items), `List<T>` is about twice as fast. `AList` (the green one) at least saves a little memory:
+
+![](bm-bytes-used-per-list-item-b.png)
+![](bm-bytes-used-per-list.png.png)
 
 `AList` also sucks at simple "filling", where items are always added to the end of the list:
 
@@ -287,7 +290,11 @@ Now let's see a graph without `SortedList` screwing up the Y axis:
 
 It should be noted that sorted dictionaries is normally slower than unsorted dictionaries. The standard `Dictionary<K,V>` and the `MMap<K,V>` class of [Loyc.Collections](/collections) are both unsorted, so they are faster than `BDictionary<K,V>` and the standard `SortedDictionary<K,V>` which are sorted.
 
-To my disappointment, `BDictionary<K,V>` is usually slower than `SortedDictionary<K,V>`. On the plus side, `BDictionary<K,V>` uses less memory than `SortedDictionary<K,V>` because it packs its items into arrays. In contrast, `SortedDictionary` is a red-black tree that allocates a separate heap object for every pair (node) in the dictionary. The overhead of this is 5 words per item, typically 40 bytes in a 64-bit process (that's two words for the object header, two words for references to the left and right children of each node, and one word for the "red" flag of the [red-black tree](http://en.wikipedia.org/wiki/Red%E2%80%93black_tree)). It should also be noted that `SortedDictionary<K,V>` can cause more stress on the garbage collector than `BDictionary<K,V>` because it contains so many references; I expect this only affects performance significantly in apps with large heaps.
+To my disappointment, `BDictionary<K,V>` is usually slower than `SortedDictionary<K,V>`. On the plus side, `BDictionary<K,V>` uses less memory than `SortedDictionary<K,V>` because it packs its items into arrays.
+
+![](bm-bytes-per-dictionary-pair-b.png)
+
+In contrast, `SortedDictionary` is a red-black tree that allocates a separate heap object for every pair (node) in the dictionary. The overhead of this is 5 words per item, typically 40 bytes in a 64-bit process (that's two words for the object header, two words for references to the left and right children of each node, and one word for the "red" flag of the [red-black tree](http://en.wikipedia.org/wiki/Red%E2%80%93black_tree)). It should also be noted that `SortedDictionary<K,V>` can cause more stress on the garbage collector than `BDictionary<K,V>` because it contains so many references; I expect this only affects performance significantly in apps with large heaps.
 
 Although its speed is merely O.K., `BDictionary<K,V>` is often a better choice than `SortedDictionary<K,V>` because it supports many operations, such as "find next higher key", "split list into two pieces", "observe changes" and "clone instantly" that `SortedDictionary<K,V>` does not.
 
