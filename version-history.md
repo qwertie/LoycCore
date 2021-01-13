@@ -6,6 +6,177 @@ layout: page
 LoycCore and [LES](http://loyc.net/les)
 ------------------
 
+### v2.9.0.3 (a.k.a. v29): January 13, 2021 ###
+
+#### Potentially breaking changes & deprecations: ####
+
+**Loyc.Interfaces:**
+- The `ListChanging` event in `INotifyListChanging<T>` and in all classes derived from `AListBase` was changed to use the new type `event ListChangingHandler<T, IListSource<T>> ListChanging`.
+- Renamed `AddIfNotPresent<K, V>(this IDictionaryEx<K, V> dict, K key, V value)` to `TryAdd`, to match standard .NET methods such as `ConcurrentDictionary.TryAdd`. The old method is still there, but marked Obsolete.
+- Added `ListChangingHandler<T, TSender>`, and deprecated `ListChangingHandler<T>` in favor of `ListChangingHandler<T, IListSource<T>>`. This change helps dictionaries, sets and other non-list collections to provide change notifications (i.e. `DictionaryWithChangeEvents` and `CollectionWithChangeEvents`).
+- Added interfaces `ILast`, `IMLast`, `IFirst`, `IMFirst` for immutable and mutable `First` and `Last` properties of collections.
+    - `IDeque` inherits from these instead of having First/Last properties;
+    - `IFRange` now inherits from `IHasFirst`;
+    - `IBRange` now inherits from `IHasLast`;
+    - `IMFRange` now inherits from `IHasMFirst`;
+- Added `IIndexedSink<in K, in V>` interface as base interface of `IDictionarySink<in K, in V>`
+- Altered `ISourceRange` to use `IIndexRange` as its base interface
+- Added `ISource<T>` as a new base interface of `IListSource<T>`. Because of this, all implementations of `IListSource<T>` now require an `IsEmpty` property.
+- Added `IListAndListSource` and `ICollectionImpl` as base interfaces of `IListImpl<T>`
+- Renamed `IHasXxx` interfaces to `IXxx`. Rationale: in v28 there were several interfaces like `IContains`,
+`ICount`, `IPush`, `IOptimize` and `IIsEmpty` that are simply named after the method or property they contain. There were also several interfaces with an `IHas` pattern, e.g. `IHasValue`, `IHasLocation`, `IHasFileName`. I've decided it's better to have a regular naming scheme, and I simply tend to like the bare names (without 'Has') better.
+    - Renamed `IHasLocation` to `ILocation` (old name is derived and marked obsolete)
+    - Renamed `IHasValue` to `IValue (old name is derived and marked obsolete)
+    - Renamed `IHasMutableValue` to `IMValue` (old name is derived and marked obsolete)
+    - Renamed `IHasFileName` to `IFileName` (old name is derived and marked obsolete)
+- Added `IDictionarySource<K,V>` as a new base interface of `IDictionaryImpl<K,V>`. Because of this, all implementations of this interface and `IDictionaryEx<K,V>` must now provide an `IsEmpty` property and a `TryGet` method in addition to `TryGetValue`. `TryGet` is better than `TryGetValue` because it supports variance, e.g. `ITryGet<object, Symbol>` can be assigned to a variable of type `ITryGet<string, object>`.
+- Added new `ILineToIndex` interface as base interface of `IIndexPositionMapper`
+- Make appending `UString` to `StringBuilder` more discoverable by making non-static `AppendTo` method (it cannot be an `Append` extension method on `StringBuilder` because `StringBuilder.Append(object)` takes priority.) The old static method `Append` is marked Obsolete.
+- Added `ISparseListSource<T>.Slice()` method that must return `ISparseListSource<T>`
+- Simplified `IListSource<T>.Slice` return value from `IRange<T>` to `IListSource<T>`. Experience has shown that Ranges don't work as well in C# as they do in D, and changing the return value to `IListSource` required no changes to any of the consumers of the lists in this codebase. Later I might remove implementations of `IRange<T>` from the Slice classes, but not yet.
+
+**Loyc.Essentials:**
+- `EmptyList<T>` is now a singleton and `EmptyList<T>.Value` is assigned to `new Repeated<T>(default(T), 0)` so that the rest of `EmptyList<T>` could be deleted.
+
+**Loyc.Collections:**
+- Renamed `AddIfNotPresent` methods in `BDictionary<,>` to `TryAdd`, to match standard .NET methods such as `ConcurrentDictionary.TryAdd`. The old methods are still there, but marked Obsolete.
+
+**Loyc.Syntax:**
+- Changes in `Token`:
+    - `Token.ToStringStrategy` and `Token.SetToStringStrategy` now use `Func<Token, ICharSource, string>` instead of `Func<Token, string>` to allow the original token text to be obtained from source code.
+    - `Token.ToLNode` was moved to `TokenTree` (the only class that uses this method) as `TokenTree.TokenToLNode(Token, ISourceFile)`. The old method still exists but is marked Obsolete.
+    - Disabled the setter of the `Value` property. `WithValue` can be called to create a new token with a different value.
+- Changes to support new literal system in LES2 and LES3 ([video on Loyc Literal System](https://www.youtube.com/watch?v=ttLc9iuxEro)):
+    - Marked `CustomLiteral` as [Obsolete]
+    - Added `ILNodePrinterOptions.LiteralPrinter` property of type `ILiteralPrinter` so users can more fully control the printing of literals
+    - Rename `ISerializedLiteral` to `IUninterpretedLiteral`. The old name still exists and is marked [Obsolete].
+    - `LNode.Equals` now includes `TypeMarker` in comparisons between string literals.
+    - LES2 and 3 now recognizes fewer type markers than the previous version: markers using capital letters `_U`, `_UL`, `_F`, `_D` and `_Z` are no longer recognized. Such literals will still be included in the Loyc tree and no errors will be reported, but they are left uninterpreted.
+- Renamed `LNodeFactory.List()` methods to `AltList()`. This is done to match the name used in `CodeSymbols` and to avoid confusion, since `List` does not create a JavaScript-style list (the symbol `CodeSymbols.Array` is assigned to that purpose.) The old name still exists and is marked `Obsolete`, but will be removed in the future.
+- `NodeStyle`: increase `BaseStyleMask` from 3 to 4 bits and deprecate `OneLiner`
+- Renamed `PrinterState` to `LNodePrinterHelper`, which implements the new interfaces `ILNodePrinterHelperWithRevokableNewlines<LNodePrinterOutputLocation, LNodePrinterHelper>` and `ILNodePrinterHelper`. The old name still exists (as a derived class) and is marked Obsolete.
+- `LNodePrinterHelper.CommitNewlines` returns `this` instead of `int`.
+- Class `DefaultNodePrinterWriter` has been deleted, as EC# and LES now use `LNodePrinterHelper` instead.
+- Removed `Les2Printer.Writer` property and renamed `ParsedValue` to `LiteralFromParser` - changes that probably affect no one.
+
+LES2:
+- LES2 no longer prints TokenTree with its native syntax `@{...}`, as nothing important relied on this feature, it was lost in the refactor, and it never worked quite right anyway.
+- `Les2Lexer.UnescapeString` and `UnescapeQuotedString` were moved to
+  `Les3Lexer` (the old name still exists and is marked [Obsolete])
+- `-123` is no longer a negative number. As in LES3, `-123` is a number with a `'-` operator attached to it, and you can force it to be interpreted as a negative literal using either the \u2212 minus sign (`−123`) or string syntax (`_"-123"`). The old interpretation was removed because it could cause unintuitive parsing, e.g.
+  `-2**x` used to mean `(-2)**x` whereas `-a**x` means `-(a**x)`.
+
+#### Non-breaking changes
+
+#### Loyc.Interfaces
+
+- Added `ILiteralParser` and `ILiteralPrinter` interfaces, which are implemented by `LiteralHandlerTable` in Loyc.Syntax.
+- Added interfaces for observable collections:
+    - `INotifyListChanged<T, TCollection>` which encapsulates a `ListChanged` event
+    - `INotifyListChanged<T>` which acts as an alias for `INotifyListChanged<T, IListSource<T>>`
+    - `IListWithChangeEvents<T>`, which combines `IListAndListSource<T>` with `INotifyListChanging<T>` and `INotifyListChanged<T>`
+    - `IListExWithChangeEvents<T>`, which combines `IListEx<T>` with   `IListWithChangeEvents<T>` 
+    - `IDictionaryWithChangeEvents<K, V>` (which combines `IDictionaryAndReadOnly<K, V>` with `INotifyListChanging<KeyValuePair<K, V>, IDictionary<K, V>>` and  `INotifyListChanged<KeyValuePair<K, V>, IDictionary<K, V>>`)
+    - `IDictionaryExWithChangeEvents<K, V>` (which combines `IDictionaryEx<K, V>` with `IDictionaryWithChangeEvents<K, V>`).
+- Brought back the `ISource<T>` interface, which is the same as `IReadOnlyCollection<T>` except that it implements `ICount` and `IIsEmpty`.
+- Added `TryPopFirst()` and `TryPopLast()` methods in `UString`
+- Added `ListChangeInfo<T>.OldItems` property. Also added support for this property to the ALists (classes derived from `AListBase<T>`)
+- Added `IIndexRange` interface (with integer properties `StartIndex`, `EndIndex` and `Length`), and a simple implementation in `struct IndexRange` (with methods `Overlaps`, `Contains` and `GetRangeOfOverlap`).
+- Added `IMIndexed<K,V>` (mutable derived interface of `IIndexed<K,V>`)
+- Added `IDictionarySource<K,V>`, which is `IReadOnlyDictionary<K,V>` plus minor interfaces `IIndexed<K, V>`, `ITryGet<K, V>`, and `ISource<KeyValuePair<K, V>>`.
+- Add `ILogMessage` interface that `LogMessage` implements
+- Added static `MessageSink.Write(this IMessageSink<object>, ILogMessage)` and `MessageSink.Write(this IMessageSink<object>, LogMessage)` methods
+- Added overload of `G.With` extension method that allows the lambda to take its value by reference
+- Added methods to `CheckParam`: `ThrowBadArgument` (3 overloads), plus two new overloads of `ThrowOutOfRange`, and `ThrowIfStartOrCountAreBelowZeroAndLimitCountIfNecessary` (which encapsulates a common code sequence from many slice classes.)
+- Added methods `Equals`, `GetHashCode`, and `ToString` in `Either<,>`
+- `EmptySourceFile.Synthetic.FileName` is now "<Synthetic Code>" instead of "Synthetic", and `EmptySourceFile.Unknown.FileName` is "<Unknown Location>" instead of "Unknown".
+- Workaround: added numerous overloads of the `.TryGet(key)` and `.TryGet(key, defaultValue)` extension methods for various interfaces and types derived from `ITryGet{K,V}` because C# is "unable to infer" the type parameters of `ITryGet{K,V}` itself.
+
+#### Loyc.Essentials:
+
+- Added wrapper classes with change events: `ListWithChangeEvents`, `DictionaryWithChangeEvents`, and `CollectionWithChangeEvents`. These classes provide change notifications for changes to ordinary non-observable collections.
+- Added wrapper classes in Loyc.Essentials: `CollectionWrapper`, `ListWrapper`, `DictionaryWrapper`, and `SetWrapper`
+- Added `AsSink` extension methods with helper classes `CollectionAsSink`, `DictionaryAsSink` and `ListAsSink`
+- Added `NullMessageSink.Write(Severity)` overload and fixed the `Count` and `ErrorCount` properties, whose values were the reverse of each other.
+- Added new overloads of `WithoutPrefix` and `WithoutSuffix` for `UString` in `StringExt`
+    - Added `StringComparison` parameter for the existing extension methods for `string`
+- Added extension method overload `AsListSource(this IReadOnlyList<T>)` with corresponding adapter class `ReadOnlyListAsListSource<T>`, plus 3 disambiguating overloads and a no-op (`AsListSource<T>(this IListSource<T> c) => c`)
+- Added `BufferedSequence<T>.BufferedCount` property
+- Added disambiguating overload `DictionaryExt.TryGetValue(this IDictionaryAndReadOnly...)`
+- Added `SparseListSourceSlice` which can be used to implement the new `Slice` method in `ISparseListSource<T>` (and _is_ used by `SparseAList<T>`).
+- Bug fix: when `Assert.AreEqual` failed, it sometimes showed `...` inappropriately at the end of the shorter of two strings when it did not truncate that string.
+
+#### Loyc.Collections:
+
+- `BMultiMap<,>.ValueList`: Added `IsEmpty`, `StartIndex`, `EndIndex` properties
+
+#### Loyc.Syntax:
+
+- Add general-purpose classes called `LiteralHandlerTable` and `StandardLiteralHandlers` for literal parsing and printing. Also, I made a [video about these classes](https://www.youtube.com/watch?v=ttLc9iuxEro).
+- Added `LNodeRangeMapper` class, the importance of which is explained by [another video](https://www.youtube.com/watch?v=Ue3W52iVH8c)
+- Other changes to [`Token`](http://ecsharp.net/doc/code/structLoyc_1_1Syntax_1_1Lexing_1_1Token.html):
+    - Added `TextValue` method, `TypeMarker` property, and corresponding constructors that make them work. Tokens that support this method are called "uninterpreted literals" and their `Value` is always null. Documentation of the new constructors explains how they work.
+    - On 32-bit platforms this increases Token size from 16 to 20 bytes.
+    - On 64-bit platforms the Token size is unchanged at 24 bytes.
+    - `Token.Length` is now 32 bits instead of 24 (though `LNode.Range.Length` is still limited to 0x7FFFFF).
+    - New overload `Token.ToString(ICharSource)` allows you to provide original source code to be used to figure out the string form of the Token.
+    - Deprecated apparently unused method `Token.GetParenPairSymbol`
+    - `Token` converts implicitly to `IndexRange`
+- Other changes were made to support new literal system in LES2 and LES3:
+    - `Les2Lexer` and `Les3Lexer` no longer parse literals (it's the parser's job now)
+    - In `LNodeFactory`, `Literal(Token)` now automatically parses uninterpreted literals via `StandardLiteralHandlers.Value`. Added `LiteralFromValueOf(Token)` which replicates the old behavior of `Literal(Token)`, and `UninterpretedLiteral(Token)` which creates a literal node from an uninterpreted token without parsing the token (this used to be known as a "custom literal"). All the parser has to do to parse literals correctly now is to set `LNodeFactory.ErrorSink` so that it can report literal parsing errors.
+    - `LNode.Equals` now includes `TypeMarker` in comparisons between string literals. The `TextValue`s are also compared when using `CompareMode.Styles`. By default, two literals are considered equal if their Values are equal and either (1) the TypeMarkers are equal, (2) the Values are not strings (nor UString)s, or (3) the Values are strings, but one of the type markers is null and the other is empty (zero-length `Name`). If `Equals` is called with the new `CompareMode.TypeMarkers` flag, strict equality of TypeMarkers is required.
+    - LES2 and 3 printers now rely on `StandardLiteralHandlers`, but this requires them to use a more complex process to detect whether a number has valid syntax, because printers no longer know in advance which types will produce valid numeric strings. Instead, a new `CanPrintAsNumber` function is used to scan supposedly-numeric printed strings to find out if it's practical to print them as numbers.
+- Changes to `LNodeFactory`:
+    - Added no-arg `LNodeFactory()` constructor, which uses `EmptySourceFile.Unknown` as its implicit source file
+    - Added optional `NodeStyle style = NodeStyle.Default` argument on several overloads of `Call`.
+    - Added five new series of methods: `CallPrefix` (4 overloads), `CallPrefixOp` (6 overloads), `CallInfixOp` (4 overloads), `CallSuffixOp` (2 overloads), `CallBrackets` (not overloaded). These methods make it easier to create Loyc nodes that have correct values for the `Range` property by choosing an appropriate range for the requested kind of operator or call.
+        - Use `CallPrefix` for ordinary calls with argument lists, e.g. `Method(x, y)`
+        - Use `CallPrefixOp` for prefix operators and calls that start with an identifying token and end with a child node, e.g. `-x` or `from x in y`
+        - Use `CallInfixOp` for binary and ternary infix operators, e.g. `x + y` or `c ? a : b`
+        - Use `CallSuffixOp` for suffix operators, e.g. `x++`
+        - Use `CallBrackets` for lists delimited by outer tokens, e.g. `{ x; y; }` or `(x, y)`
+    - Added a new overload of `Dot` and `Braces` that are used similarly to the new methods above
+    - As mentioned earlier, `Literal(Token)` behaves differently and methods `LiteralFromValueOf(Token)` and `UninterpretedLiteral(Token)` were added.
+    - `LNodeFactory` now avoids returning nodes with invalid `endIndex`
+    - Bug fix: `InParens` created a node with an incorrect value for `Range.EndIndex`
+- Changes to trivia injectors:
+    - `AbstractTriviaInjector` no longer uses `OneLiner`. Instead it scans into syntax trees recursively even if they are on a single line, giving the derived class an opportunity to inject `%appendStatement` trivia. While `OneLiner` was an interesting optimization, it caused problems in practice when interacting with macros, and therefore several macros had code to strip out the `OneLiner` style from their output. By not using `OneLiner`, this will no longer be necessary. Support for `OneLiner` has also been stripped out of Enhanced C#, LES2 and LES3.
+    - Renamed `AbstractTriviaInjector.GetAttachedTrivia` to `GetTriviaToAttach` to be less confusing
+    - Tweaked `AbstractTriviaInjector` to better handle "reified" newlines, i.e. newlines that are represented as identifiers like `'\n`. Given a stream of identifiers like { Ann, `'\n`, Bob } where `'\n` is also a newline in the trivia stream, the trivia injector used to produce
+            Ann, @`%appendStatement` @(`%trailing`(`%newline`)) `'\n`, @`%appendStatement` Bob
+        but now it will produce
+            Ann, @`%appendStatement` `'\n`, Bob
+    - If there are two blank lines between nodes `A\n\nB`, `AbstractTriviaInjector` now associates both newlines with `B`, so that ``(A; @`%newline` @`%newline` B)`` is emitted instead of ``(@`%trailing`(`%newline`) A; @`%newline` B)``. Its behavior has not changed for the case of three or more newlines (`A\n\n\nB` becomes ``(@`%trailing`(`%newline`, `%newline`) A; @`%newline` B)`` or a single newline (`A\nB` becomes ``(A; @`%newline` B)``). I decided that this behavior was more desirable in most cases. Unit tests of LES2, LES3 and EC# were changed to expect the new behavior.
+- Changes to `IMacroContext` (with implementation in LeMP):
+    - Added `ICollection<Symbol> OpenMacroNamespaces` property
+    - Add `PreviousSiblings` and `AncestorsAndPreviousSiblings` properties to `IMacroContext`
+    - Return type of `Ancestors` was expanded from `IReadOnlyList<LNode>` to `IListSource<LNode>` (this allows more `LinqToLists` methods to work on it. Arguably the right solution is to write more `LinqToLists` methods, but I took the easy way out.)
+- Added interfaces `IPrinterHelper<out Self>` `ILNodePrinterHelper<out Self>`, `ILNodePrinterHelperWithRevokableNewlines<Checkpoint, out Self>` and `ILNodePrinterHelper`, plus extension methods in `LNodePrinterHelperExt`, and an extensible enum called `PrinterIndentHint`.
+- Added overload `LNode.WithArgs(IEnumerable<LNode> args)`
+- Added `LNodeList.AddIfNotNull(item)` method
+- Added `ILNodePrinterOptions.SaveRange` property with support in EC#, LES2 and LES3 (in addition to `LiteralPrinter` property mentioned earlier)
+- `BaseParserForList<,>` and `BaseParserForList<,,>` have new constructors that accept a `Func<Token,Token> getEofToken` instead of `Func<Token,Token> eofToken`. This allows an EOF token to be computed based on the second-to-last token, which is useful in streaming parsers that do not want to compute the correct EOF token up front. Previously, LES2 and LES3 used EOF tokens with `StartIndex=0` which is wrong; in error conditions (early EOF), this could cause an incorrect range to be associated with nodes that contain syntax errors. Updated LES2, LES3, and LLLPG parsers to use the new constructor (the EC# parser doesn't use BaseParserForList).
+- Added static `SourceRange.New<IndexRange>(ISourceFile, IndexRange)` which returns `new SourceRange(source, range.StartIndex, range.Length)`, plus an implicit conversion from `SourceRange` to `IndexRange`.
+- Bug fix in `LexerSource.Error(int, string, ...)`
+- Bug fix in `BaseLexer`: if an error occurred at a certain position P, and then the lexer was Reset, and then another error occurred at P in the new file, the latter error would not be reported.
+
+**LES2:**
+
+- Custom literals now work in LES2 using basically the same syntax as LES3, e.g. `123myNumber` or `myString"hello"`. As in LES3, `StandardLiteralHandlers.Value` is being used to parse and print.
+- Added `?>` and `<?` operators with same precedence as `?` and `:`
+- Bug fix: LES2 printer used LES3 precedence for operators that start with `'`
+
+**LES3:**
+
+- LES3 parser now allows you to exit token list mode with a single quote, or begin token list mode after a comma. For example, `(' a b c ' Foo(2), ' d e f)` means `(a, b, c, Foo(2), 1, 2, 3)`.
+- Added `?>` and `<?` operators with same precedence as `?` and `:`
+- When using `ParsingMode.Expressions`, the LES parser no longer expects a newline between items and will not insert `%appendStatement` trivia when the expected newline isn't there
+- Refined LES3 logic for detecting "unexpected separator" errors; doing it correctly is difficult. Previously `{ a, b\n }` and `{ a, b\n c }` would be treated as errors because the newline was treated like a semicolon; now, the first case is OK and the second case is still an error.
+- Bug fix: `TokenType.Unknown` mistakenly had the same value as `TokenType.EOF` which could mess up error messages and cause LES3 parsing to stop instantly at an invalid token, such as a backslash.
+- Bug fix: `}` was indented too much if there was a `//` comment on the previous line.
+- Flipped inheritance relationship between `Les2PrecedenceMap` and `Les3PrecedenceMap`.
+
 ### v2.8.3: November 16, 2020 ###
 
 Loyc.Interfaces:
