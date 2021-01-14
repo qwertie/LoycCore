@@ -10,6 +10,8 @@ LoycCore and [LES](http://loyc.net/les)
 
 #### Potentially breaking changes & deprecations: ####
 
+_Note: it's not as bad as it looks - most users will be unaffected._
+
 **Loyc.Interfaces:**
 - The `ListChanging` event in `INotifyListChanging<T>` and in all classes derived from `AListBase` was changed to use the new type `event ListChangingHandler<T, IListSource<T>> ListChanging`.
 - Renamed `AddIfNotPresent<K, V>(this IDictionaryEx<K, V> dict, K key, V value)` to `TryAdd`, to match standard .NET methods such as `ConcurrentDictionary.TryAdd`. The old method is still there, but marked Obsolete.
