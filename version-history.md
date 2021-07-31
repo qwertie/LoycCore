@@ -3,8 +3,22 @@ title: "Version history"
 tagline: "Gathered from commit messages. Trivial changes omitted."
 layout: page
 ---
-LoycCore and [LES](http://loyc.net/les)
-------------------
+
+Changes to Loyc Core libraries and [LES](http://loyc.net/les)
+----------------------------------------
+
+### v30.0: January 26, 2021 ###
+
+Changes to the `IEnumerable<T>` extension methods in EnumerableExt:
+- Used LeMP to shorten the implementation
+- `IndexOfMin` and `IndexOfMax` now give you the minimum item instead of
+  the minimum result of the selector. (This allows `MinItemOrDefault`
+  and `MaxItemOrDefault` to be simplified by being written in terms of
+  `IndexOfMin` and `IndexOfMax`)
+- `MinOrDefault` and `MaxOrDefault` have been renamed to
+  `MinItemOrDefault` and `MaxItemOrDefault` to better indicate how they
+  differ from the standard `Min` and `Max` extension methods.
+- Added `MaxItem` and `MinItem` extension methods
 
 ### v2.9.0.3 (a.k.a. v29): January 13, 2021 ###
 
