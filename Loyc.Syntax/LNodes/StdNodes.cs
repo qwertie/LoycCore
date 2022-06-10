@@ -318,6 +318,22 @@ namespace Loyc.Syntax
 				return this;
 			return WithAttrs(newAttrs);
 		}
+		public override LNode WithRange(int startIndex, int endIndex)
+		{
+			// Bug fix 2016-10: changing the Range affected Target.Range because
+			// _targetOffs is relative to RAS. Avoid that. TODO: unit tests for this.
+			int targetStart = RAS.StartIndex + _targetOffs;
+			int newTargetStart = targetStart - startIndex;
+			if (newTargetStart != (ushort)newTargetStart) {
+				// Switch to StdComplexCallNode because new value of _targetOffs won't fit in ushort
+				return new StdComplexCallNodeWithAttrs(_attrs, Target, Args, new SourceRange(RAS.Source, startIndex, endIndex - startIndex), RAS.Style);
+			} else {
+				var copy = cov_Clone();
+				copy.RAS = new RangeAndStyle(RAS.Source, startIndex, endIndex - startIndex, RAS.Style);
+				copy._targetOffs = (ushort)newTargetStart;
+				return copy;
+			}
+		}
 	}
 
 	internal class StdComplexCallNode : StdCallNode
