@@ -7,10 +7,32 @@ layout: page
 Changes to Loyc Core libraries and [LES](http://loyc.net/les)
 ----------------------------------------
 
+### v30.1: June 15, 2022 ###
+
+- Potentially breaking: support for .NET 4.5 has been removed (.NET 4.7 is still supported temporarily)
+
+**Loyc.Syntax:**
+
+- Potentially breaking: `LNode.IsSpecialName` now returns `true` if the name is null or empty. I didn't record a rationale for the original decision, but it seems to me that it's better to treat `` as special because (1) a C/C++ port with null-terminated strings can just return `Name[0] < '\''` without a length check, and (2) the empty string sure ain't a _normal_ name.
+- Add helper methods `LNodeExt.UnwrapBraces`, `LNodeExt.Unwrap` methods
+- Bug fix in LNode: `WithRange` could delete attributes in special cases.
+
+**Loyc.Collections:**
+
+- Potentially breaking: `INegArray` now implements `IArraySink<T>` and `IIndexed<int, T>` (otherwise, no new members)
+- Added `IAutoNegArray<T>`, a tag interface synonymous with `INegArray<T>`
+- Added `struct InternalDArray<T>`, which is a variation on `InternalDList<T>` that implements `IAutoNegArray<T>`. Avoid it: I feel like I gave this structure the wrong name, and I may rename it soon.
+
+**Loyc.Essentials:**
+
+- Added `TypeDictionaryWithBaseTypeLookups<Value>`, A dictionary whose keys are `Type`s. It behaves almost like a standard dictionary, except that the `TryGetValue` method will find matches on base types and interfaces.
+- `InternalDList<T>.Slice(int start, int subcount)` is now `public`
+- Remove redundant method `G.Swap`
+
 ### v30.0: January 26, 2021 ###
 
 Changes to the `IEnumerable<T>` extension methods in EnumerableExt:
-- Used LeMP to shorten the implementation
+
 - `IndexOfMin` and `IndexOfMax` now give you the minimum item instead of
   the minimum result of the selector. (This allows `MinItemOrDefault`
   and `MaxItemOrDefault` to be simplified by being written in terms of
@@ -19,6 +41,13 @@ Changes to the `IEnumerable<T>` extension methods in EnumerableExt:
   `MinItemOrDefault` and `MaxItemOrDefault` to better indicate how they
   differ from the standard `Min` and `Max` extension methods.
 - Added `MaxItem` and `MinItem` extension methods
+
+Other changes:
+
+- Implement `ITuple` on `Maybe`, `Pair` and `Triplet`,  `Equals/GetHashCode/ToString` on `Maybe<T>`
+- `Either<L,R>`, `IEither<L,R>`, `Pair<A,B>` and `Triplet<A,B,C>` now implement `System.Runtime.CompilerServices.ITuple` (`Either` considers itself a tuple of two `Maybe<>` values.)
+- Added `IEither<A,B,C>`
+- Potentially breaking: `Either<L,R>` now implements `IEquatable<ITuple>` instead of `IEquatable<IEither<L,R>>`
 
 ### v2.9.0.3 (a.k.a. v29): January 13, 2021 ###
 
