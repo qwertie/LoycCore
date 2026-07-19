@@ -11,26 +11,31 @@ Changes to Loyc Core libraries and [LES](http://loyc.net/les)
 
 **Loyc.SyncLib (new!):**
 
-- Introduced [SyncLib](http://core.loyc.net/synclib), a fast & flexible framework for doing messy real-world (de)serialization with less code and no DTOs. Supports JSON, Protocol Buffers, and a compact binary format.
-  - For now, the core of Synclib, including the binary serializer `SyncBinary`, is defined in Loyc.Essentials. It'll probably be moved to its own thing in the next major version. `SyncBinary` is a compact binary format that supports by-ref object deduplication / object cycles including optional string deduplication and bitfields. Trades safety for speed (as binary formats are not self-describing).
+- Added [SyncLib](http://core.loyc.net/synclib), a fast & flexible framework for doing messy real-world (de)serialization with less code and no DTOs. Supports JSON, Protocol Buffers, and a compact binary format.
+  - This was mostly hasnd-written in 2021, but work held me back from finishing it for 5 years. I let Fable5 finish certain parts, especially the optional dynamic typing system (`SyncDynamicExt.SyncDyn` overloads, `DefaultSynchronizer`, etc.), reviewing & editing some of its work afterward.
+  - For now, the core of Synclib is defined in Loyc.Essentials, including the binary serializer `SyncBinary`. I'll probably move it to its own thing in the next major version. `SyncBinary` has a compact binary format that supports by-ref object deduplication / object cycles including optional string deduplication and bitfields. It trades safety for speed (as binary formats are not self-describing).
   - Added the `Loyc.SyncLib.SyncJson` package to read and write JSON. Features include by-ref object deduplication / object cycles, generating JSON schemas, byte arrays in strings, and optional interoperability with Newtonsoft JSON (enabled by default, at the cost of larger and slower JSON)
-  - Added the `Loyc.SyncLib.SyncProtobuf` package, which reads and writes the Protocol Buffers wire format. It can also generate `.proto` schemas.
+  - Added the `Loyc.SyncLib.SyncProtobuf` package to read and write Protocol Buffers (wire format). It can generate, but not read, `.proto` schemas.
 
 **Loyc.Collections, Loyc.Syntax, Loyc.Math:**
 
-- These libraries were upgraded to support C# nullable reference type annotations.
+- Upgraded to support C# nullable reference type annotations (with Opus4.8)
 
 **Loyc.Essentials / Loyc.Collections:**
 
 - Added `Either.Match()`
-- Added `Empty<T>` (intended to eventually replace `EmptyList<T>`, `EmptyArray<T>` and `EmptyEnumerator<T>`)
-- Added `ReadOnlyArraySlice<T>`, and `AsContiguousMemory()` in `DList`/`InternalDList`
-- Added `MemoryComparer<T>`, `ByteComparer` and `SequenceHashCode` for use with `ReadOnlyMemory<T>`
-- Added `FirstRef`/`LastRef` in `InternalList`, and `InternalDArray.InternalList`
-- Added `StreamScanner`, plus graph interfaces/functions and `Traits<T>`
-- Added `G.DecodeUTF8Char`; moved `HexDigitValue` into `G`
-- `(Symbol) null`, `null` and `GSymbol.Get(null)` now compare equal
-- Bug fix: `BMultiMap` no longer crashes when the value type isn't comparable
+- Added `Empty<T>` to replace `EmptyList<T>`, `EmptyArray<T>` and `EmptyEnumerator<T>` and marked the latters as obsolete
+- Added `ReadOnlyArraySlice<T>`
+- Added `AsContiguousMemory()` in `DList`/`InternalDList` which rearranges the list to be contiguous if necessary
+- Added `MemoryComparer<T>` and `ByteComparer` which implement `IEqualityComparer<Memory<T>>, IEqualityComparer<ReadOnlyMemory<T>>`
+- Added `ListExt.SequenceHashCode(this ReadOnlySpan<T> span)` with variant for `<byte>`
+- Added `InternalList.FirstRef/LastRef`, to get a `ref` to the first/last element
+- Added `InternalDArray.InternalList`
+- Added `StreamScanner` which implements `IScanner<byte>` for `System.IO.Stream` objects
+- Added `Traits<T>` for efficient access to non-numeric information about a type (for numeric traits, see `Maths<T>.Traits`) (TODO: use microbenchmarks to check whether this is actually useful.)
+- Added `G.DecodeUTF8Char` and moved `HexDigitValue` into `G`
+- `BMultiMap` no longer throws by default when adding items when `V` is nullable or not comparable. Instead, if `IComparable` and `IComparable<T>` are not implemented on `T`, the multimap pretends that all values are equal.
+- Bug fix: `(Symbol?) null` and `null` now compare equal
 
 **Loyc.Math:**
 
