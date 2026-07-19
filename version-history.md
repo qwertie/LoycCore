@@ -7,6 +7,40 @@ layout: page
 Changes to Loyc Core libraries and [LES](http://loyc.net/les)
 ----------------------------------------
 
+### v30.2: July 19, 2026 ###
+
+**Loyc.SyncLib (new!):**
+
+- Introduced [SyncLib](http://core.loyc.net/synclib), a fast & flexible framework for doing messy real-world (de)serialization with less code and no DTOs. Supports JSON, Protocol Buffers, and a compact binary format.
+  - For now, the core of Synclib, including the binary serializer `SyncBinary`, is defined in Loyc.Essentials. It'll probably be moved to its own thing in the next major version. `SyncBinary` is a compact binary format that supports by-ref object deduplication / object cycles including optional string deduplication and bitfields. Trades safety for speed (as binary formats are not self-describing).
+  - Added the `Loyc.SyncLib.SyncJson` package to read and write JSON. Features include by-ref object deduplication / object cycles, generating JSON schemas, byte arrays in strings, and optional interoperability with Newtonsoft JSON (enabled by default, at the cost of larger and slower JSON)
+  - Added the `Loyc.SyncLib.SyncProtobuf` package, which reads and writes the Protocol Buffers wire format. It can also generate `.proto` schemas.
+
+**Loyc.Collections, Loyc.Syntax, Loyc.Math:**
+
+- These libraries were upgraded to support C# nullable reference type annotations.
+
+**Loyc.Essentials / Loyc.Collections:**
+
+- Added `Either.Match()`
+- Added `Empty<T>` (intended to eventually replace `EmptyList<T>`, `EmptyArray<T>` and `EmptyEnumerator<T>`)
+- Added `ReadOnlyArraySlice<T>`, and `AsContiguousMemory()` in `DList`/`InternalDList`
+- Added `MemoryComparer<T>`, `ByteComparer` and `SequenceHashCode` for use with `ReadOnlyMemory<T>`
+- Added `FirstRef`/`LastRef` in `InternalList`, and `InternalDArray.InternalList`
+- Added `StreamScanner`, plus graph interfaces/functions and `Traits<T>`
+- Added `G.DecodeUTF8Char`; moved `HexDigitValue` into `G`
+- `(Symbol) null`, `null` and `GSymbol.Get(null)` now compare equal
+- Bug fix: `BMultiMap` no longer crashes when the value type isn't comparable
+
+**Loyc.Math:**
+
+- Optimized `LineMath.SimplifyPolyline` (and added tests)
+- Bug fix (#11): `((FPLn)N).Ceiling()` incorrectly returned `N+1`
+
+**Loyc.Essentials (v30.1.3):**
+
+- Bug fix: `Exception.Description()` failed to show inner exception messages
+
 ### v30.1: June 15, 2022 ###
 
 - Potentially breaking: support for .NET 4.5 has been removed (.NET 4.7 is still supported temporarily)

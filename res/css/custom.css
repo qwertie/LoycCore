@@ -38,6 +38,49 @@
     margin: 0px; /* margin doesn't work in table cells */
 }
 
+/* SyncLib home-page code-size comparison (used by index.md). Two <div> cells
+   sit inside a .sbs table; the code is rendered in a deliberately tiny font so
+   the ~2x size difference is obvious and the SyncLib column is ~800px tall. */
+.code-compare > div {
+    vertical-align: top;
+    overflow: hidden; /* keep an overflowing code line from stretching the cell */
+}
+.code-compare .cc-head {
+    font-family: sans-serif;
+    font-weight: bold;
+    font-size: 0.8rem;
+    margin: 0 0 5px 0;
+    padding: 3px 6px;
+    border-radius: 3px;
+}
+.code-compare .cc-good { background: #e2f2e2; color: #1c6b28; }
+.code-compare .cc-meh  { background: #f4ece0; color: #8a5a1c; }
+.code-compare .highlight,
+.code-compare pre {
+    font-size: 8px;
+    line-height: 1.2;      /* 8px * 1.2 ≈ 9.6px/line; 83 lines ≈ 800px tall */
+    margin: 0;
+    padding: 2px 4px;
+    tab-size: 2;
+    -moz-tab-size: 2;
+    white-space: pre;
+    overflow-x: auto;      /* long lines scroll instead of wrapping/growing */
+    background: #fbfbfb;
+    border: none;
+}
+.code-compare pre code,
+.code-compare code {
+    font-size: inherit;
+    line-height: inherit;
+    padding: 0;
+    background: none;
+}
+.cc-caption {
+    font-size: 0.85rem;
+    color: #666;
+    margin-top: 5px;
+}
+
 /* Magic! auto-styling external links */
 a[href^="http://"]:after,
 a[href^="https://"]:after {
