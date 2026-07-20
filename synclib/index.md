@@ -1,5 +1,8 @@
-SyncLib: Powerful Serializers for the Real World
-------------------------------------------------
+---
+layout: page
+title: SyncLib
+tagline: Powerful Serializers for the Real World
+---
 
 SyncLib is a .NET system for projects where traditional attribute-based serialization falls flat, forcing you to use DTOs. Use it when you want to save or transmit data with
 
@@ -273,16 +276,10 @@ public class JsonCalendarSerialization
 </div>
 </div>
 
-<p class="cc-caption">Both columns are shown in a deliberately tiny font so you can eyeball the size difference at a glance. Shared business classes (<code>Calendar</code> and <code>CalendarEntry</code>) are the same for both and not shown above. See the full runnable example in <a href="https://github.com/qwertie/ecsharp/blob/master/Core/Tests/SyncLib/HomePageCalendarExample.cs"><code>HomePageCalendarExample.cs</code></a>.</p>
+Shared business classes (`Calendar` and `CalendarEntry`) are the same for both and not shown. See the full runnable example in [HomePageCalendarExample.cs](https://github.com/qwertie/ecsharp/blob/master/Core/Tests/SyncLib/HomePageCalendarExample.cs).
 
 ## And it's fast
 
-Less code usually costs you performance. Here it doesn't. This preliminary benchmark measures full round-trip time (write **+** read) per calendar entry, at four calendar sizes:
+![benchmarks](benchmark1.png)
 
-<p><img src="res/synclib-benchmark.png" alt="Calendar round-trip benchmark: nanoseconds per item across 100/300/1000/3000 entries, comparing SyncBinary, SyncJson (ISyncManager), Newtonsoft.Json, System.Text.Json, BinaryFormatter and MessagePack" style="max-width:100%; height:auto;" /></p>
-
-At every size, **SyncJson** (the `ISyncManager` code shown on the left) beats the equivalent hand-written **Newtonsoft.Json** and **BinaryFormatter** round-trips and runs close to **System.Text.Json** &mdash; while **SyncBinary**, which is the *same* synchronizer method emitting a binary format instead of JSON, is the fastest option of all. So the smaller code on the left is also, in these measurements, the faster code.
-
-<p class="cc-caption"><em>These numbers are preliminary and not yet fully tuned; treat them as a directional indication rather than a final result.</em></p>
-
-To learn more, read the [SyncLib reference manual](synclib/index.html) — a one-page summary of the whole library: the core `ISyncManager` API, all three formats, and the schema and dynamic-typing features.
+For more, read the [SyncLib manual](./manual).
