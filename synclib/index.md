@@ -278,8 +278,10 @@ public class JsonCalendarSerialization
 
 Shared business classes (`Calendar` and `CalendarEntry`) are the same for both and not shown. See the full runnable example in [HomePageCalendarExample.cs](https://github.com/qwertie/ecsharp/blob/master/Core/Tests/SyncLib/HomePageCalendarExample.cs).
 
-## And it's fast
+## And it's fast!
 
-![benchmarks](benchmark1.png)
+![Benchmarks 1](benchmark1.png)
+![Benchmarks 2](benchmark2.png)
+![Benchmarks 3](benchmark3.png)
 
 For more, read the [SyncLib manual](./manual).
