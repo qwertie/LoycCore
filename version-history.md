@@ -7,7 +7,7 @@ layout: page
 Changes to Loyc Core libraries and [LES](http://loyc.net/les)
 ----------------------------------------
 
-### v30.2: July 19, 2026 ###
+### v30.2: July 24, 2026 ###
 
 **Loyc.SyncLib (new!):**
 

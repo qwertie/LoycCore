@@ -1,12 +1,15 @@
 ---
 title: "SyncLib Reference Manual"
-tagline: "One synchronizer method to rule them all — ultra flexible with no DTOs"
+tagline: "Say no to DTOs"
 layout: article
 toc: true
 date: 18 Jul 2026
 ---
 
-SyncLib is a .NET serialization system for real-world projects where traditional attribute-based serialization falls flat, forcing you to use DTOs.
+See also: [**Detailed API reference**](https://ecsharp.net/doc/code/namespaceLoyc_1_1SyncLib.html)
+
+SyncLib is a .NET serialization system for real-world projects where traditional attribute-based 
+serialization falls flat, forcing you to use DTOs.
 
 Attribute-based libraries don't allow the level of control you need for
 
@@ -15,9 +18,8 @@ Attribute-based libraries don't allow the level of control you need for
 - Multiple serialization formats for backward compatibility purposes (v1/v2)
 - Serializing the same type in multiple ways (storing Color as string in some places and as integer in others)
 
-With SyncLib you can support many serializers at once in about half the lines of code as DTO-based transformations, while getting great performance.
-
-To use it, write one *synchronizer* method per type — a method that reads **or** writes each field depending on the mode. That single method drives loading, saving, and even schema generation, in every supported data format. (See the [home page](/index.html) for a side-by-side comparison with a traditional serializer.)
+With SyncLib you can support many serializers at once in about half the lines of code as DTO-based 
+transformations, while getting great performance.
 
 The library ships in three assemblies (all in the `Loyc.SyncLib` namespace):
 
@@ -25,7 +27,7 @@ The library ships in three assemblies (all in the `Loyc.SyncLib` namespace):
 - **Loyc.SyncLib.SyncJson.dll**: The **SyncJson** format (JSON + JSON Schema)
 - **Loyc.SyncLib.SyncProtobuf.dll**: The **SyncProtobuf** format (Protocol Buffers + .proto schema)
 
-Low-level building blocks live in `Loyc.SyncLib.Impl` (summarized [at the end](#the-implementation-layer-loycsynclibimpl)). Detailed API documentation is in the source code and will be generated when I find the time...
+Low-level building blocks live in `Loyc.SyncLib.Impl` (summarized [at the end](#the-implementation-layer-loycsynclibimpl)).
 
 The synchronizer concept
 ------------------------
@@ -63,19 +65,38 @@ var bytes    = SyncBinary.Write(jack, SyncPerson);
 Person? j2   = SyncBinary.Read<Person>(bytes.ToArray(), SyncPerson);
 ~~~
 
-Each `Sync` call *returns* the field's value (the saved value when writing, the loaded value when reading) so the same code both saves and loads.
+Each `Sync` call *returns* the field's value (the saved value when writing, the loaded value 
+when reading), so the same code both saves and loads. To understand synchronizers, read them
+once imagining that SM is writing output (e.g. `SyncJson.Writer`), and a second time imagining 
+that SM is reading a file (`SyncJson.Reader`).
 
-For a very small performance boost, put your synchronizer(s) in a struct that implements `ISyncObject<SM,T>` so that SyncLib can call your synchronizers with static dispatch:
+For a very small performance boost, put your synchronizer(s) in a struct that implements 
+`ISyncObject<SM,T>` so that SyncLib can call your synchronizers with static dispatch. It's 
+also a convenient way to group synchronizers together:
 
 ~~~csharp
-public class PersonSync<SM> : ISyncObject<SM, Person> where SM : ISyncManager
+public struct PersonSync<SM> : 
+    ISyncObject<SM, Person>,
+    ISyncObject<SM, Address> where SM : ISyncManager
 {
-    public Person Sync(SM sync, Person? obj)
+    public Person Sync(SM sm, Person? obj)
     {
         sync.CurrentObject = obj ??= new Person();
-        obj.Name = sync.Sync("Name", obj.Name);
-        obj.Age = sync.Sync("Age", obj.Age);
-        obj.Siblings = sync.SyncList("Siblings", obj.Siblings, this);
+        obj.Name = sm.Sync("Name", obj.Name);
+        obj.Age = sm.Sync("Age", obj.Age);
+        obj.Siblings = sm.SyncList("Siblings", obj.Siblings, this);
+        obj.PrincipalAddress = sm.Sync("Address", obj.PrincipalAddress, this);
+        return obj;
+    }
+
+    public Address? Sync(SM sm, Address? obj)
+    {
+        obj ??= new();
+        sm.Sync("HouseNo", ref obj.HouseNo);
+        sm.Sync("Street", ref obj.Street);
+        sm.Sync("City", ref obj.City);
+        sm.Sync("State", ref obj.State);
+        sm.Sync("PostalCode", ref obj.PostalCode);
         return obj;
     }
 }
@@ -83,18 +104,35 @@ public class PersonSync<SM> : ISyncObject<SM, Person> where SM : ISyncManager
 
 ### How to write synchronizers
 
-- When reading, construct the object (`obj ??= new Person()`) and also assign `sm.CurrentObject` if the current object could ever be part of a cycle (i.e. reachable via properties of the current object.)
-- Pass `Sync` the same property to which you write the return value: `obj.P = sm.Sync("P", obj.P)`. Avoid `nameof(obj.P)` because this will change the expected property name in saved (JSON) data when the property is remained, which would break backward compatibility. You can break this rule if the serialized form is always transient, with name changes always synchronized between sender and receiver.
-- Synchronize fields unconditionally and in a fixed order to achieve compatibility with all `ISyncManager` implementations. If the set of fields changes over time, use explicit versioning: write a version number field first, then branch on it; this is compatible with all `ISyncManager`s. These rules can be relaxed if `sm.SupportsNextField` and `sm.SupportsReordering` return true.
-- To support protocol buffers fully, include property numbers, not just names: `obj.Z = sm.Sync(("Z", 3), obj.Z)` (or use `new("Z", 3)` meaning `new FieldId("Z", 3)` to avoid a conversion from `(string, int)`)
-- If your code must behave differently when loading vs. saving, test `sm.IsReading` / `sm.IsWriting`.
-- SyncJson, SyncBinary and SyncProtobuf support object dedeuplication and cycles, but you can check `sm.SupportsDeduplication` to make sure.
+- When reading, construct the object (`obj ??= new Person()`) and also assign `sm.CurrentObject` 
+  if the current object could ever be part of a cycle (i.e. reachable via properties of the 
+  current object.)
+- Pass `Sync` the same property to which you write the return value: `obj.P = sm.Sync("P", obj.P)`.
+  Avoid `nameof(obj.P)` because this will change the expected property name in saved (JSON) data 
+  when the property is remained, which would break backward compatibility. You can break this 
+  rule if the serialized form is always transient, with name changes always synchronized between 
+  sender and receiver.
+- Synchronize fields unconditionally and in a fixed order to achieve compatibility with all 
+  `ISyncManager` implementations. If the set of fields changes over time, use explicit versioning:
+  write a version number field first, then branch on it; this is compatible with all 
+  `ISyncManager`s. These rules can be relaxed if `sm.SupportsNextField` and `sm.SupportsReordering`
+  return true.
+- To support protocol buffers fully, include property numbers, not just names: 
+  `obj.Z = sm.Sync(("Z", 3), obj.Z)` (or use `new("Z", 3)` meaning `new FieldId("Z", 3)` to avoid 
+  a conversion from `(string, int)`)
+- If your code must behave differently when loading vs. saving, test `sm.IsReading`/`sm.IsWriting`.
+- SyncJson, SyncBinary and SyncProtobuf support object dedeuplication and cycles, but you can 
+  check `sm.SupportsDeduplication` to make sure.
 
 ### How to serialize/deserialize
 
-To read or write, call a static `Read(obj, synchronizer, options)` or `Write(data, synchronizer, options)` method on `SyncJson`, `SyncBinary`, or `SyncProtobuf`, unless your synchronizers take an `ISyncManager` argument, in which case you must call `ReadI` or `WriteI` instead (they cannot have the same name due to a limitation of the C# language).
+To read or write, call a static `Read(obj, synchronizer, options)` or 
+`Write(data, synchronizer, options)` method on `SyncJson`, `SyncBinary`, or `SyncProtobuf`, unless 
+your synchronizers take an `ISyncManager` argument, in which case you must call `ReadI` or `WriteI` 
+instead (they cannot have the same name due to a limitation of the C# language).
 
-Sync managers should offer these overloads (where `Options` is specific to the data format, e.g. `SyncJson.Options`):
+Sync managers should offer these overloads (where `Options` is specific to the data format, 
+e.g. `SyncJson.Options`):
 
     // All formats
     public static T? Read<T>(ReadOnlyMemory<byte> input, SyncObjectFunc<Reader, T> sync, Options? options = null)
@@ -123,7 +161,8 @@ Sync managers should offer these overloads (where `Options` is specific to the d
     public static Reader NewReader(IScanner<byte> input, Options? options = null)
     public static Reader NewReader(string input, Options? options = null)
 
-To use the `IScanner<byte>` overload, one typically uses `StreamScanner`:
+To use the `IScanner<byte>` overload, one typically uses `StreamScanner` (you can read any 
+`Stream` via `new StreamScanner(stream)`):
 
     var reader = SyncJson.NewReader(StreamScanner.OpenFile(path));
     var output = reader.Sync(null, default(T), sync, ObjectMode.Normal);
@@ -155,7 +194,8 @@ Use `WriteSchema(sync, options)` to write a JSON or protobuf schema:
 The ISyncManager interface
 --------------------------
 
-All formats implement `ISyncManager` and it has hundreds of extension methods. Here are the members meant for end users:
+All formats implement `ISyncManager` and it has hundreds of extension methods. Here are the 
+members meant for end users:
 
 ### Properties
 
@@ -169,7 +209,9 @@ All formats implement `ISyncManager` and it has hundreds of extension methods. H
     bool SupportsDeduplication { get; }
     bool NeedsIntegerIds { get; } // true for Protobufs
 
-If possible, use `IsReading/IsWriting` instead of `Mode`. If `Mode is SyncMode.Schema`, `IsReading` is true; all values "read" are default/null, and collections pretend to have one element.
+If possible, use `IsReading/IsWriting` instead of `Mode`. If `Mode is SyncMode.Schema`, 
+`IsReading` is true; all values "read" are default/null, and collections pretend to have one 
+element.
 
 #### Status
 
@@ -177,17 +219,35 @@ If possible, use `IsReading/IsWriting` instead of `Mode`. If `Mode is SyncMode.S
     FieldId NextField { get; } // returns FieldId.Missing at end-of-object or if not supported
     SyncType GetFieldType(FieldId name, SyncType expectedType = SyncType.Unknown);
 
-As implied by `NextField`, SyncLib has a concept of "which field is next in the data stream". Formats that support reading fields out of order (SyncJson, SyncProtobuf) typically have to do extra work if you skip any field while reading, because they are designed to stream in data from an `IScanner<byte>`. For example, if the data stream has `{ "A": {"subobject": true, ...}, "B": 7 }` and you read "B" without reading "A", `SyncJson` will save the JSON data for "A" in memory, just in case you do read it later. Simple sync managers like the `Person` example above normally avoid this cost.
+As implied by `NextField`, SyncLib has a concept of "which field is next in the data stream". 
+Formats that support reading fields out of order (SyncJson, SyncProtobuf) typically have to 
+do extra work if you skip any field while reading, because they are designed to stream in 
+data from an `IScanner<byte>`. For example, if the data stream has 
+`{ "A": {"subobject": true, ...}, "B": 7 }` and you read "B" without reading "A", `SyncJson` 
+will save the JSON data for "A" in memory, just in case you do read it later. Simple sync 
+managers like the `Person` example above normally avoid this cost.
 
-`GetFieldType` gets a general type category for a field, `SyncType.Unknown` if getting types is not supported, or `SyncType.Missing` if the field is absent or if it is incompatible with `expectedType`. For example, use `expectedType = SyncType.ByteList` if you want to read a byte array. If reading JSON and the actual type is boolean, which cannot be interpreted as a byte array, `GetFieldType` returns `SyncType.Missing`. But if the JSON type is string, `GetFieldType` returns `SyncType.String`, as it is potentially convertible to a byte array, although the conversion is not guaranteed to work.
+`GetFieldType` gets a general type category for a field, `SyncType.Unknown` if getting types 
+is not supported, or `SyncType.Missing` if the field is absent or if it is incompatible with 
+`expectedType`. For example, use `expectedType = SyncType.ByteList` if you want to read a 
+byte array. If reading JSON and the actual type is boolean, which cannot be interpreted as a 
+byte array, `GetFieldType` returns `SyncType.Missing`. But if the JSON type is string, 
+`GetFieldType` returns `SyncType.String`, as it is potentially convertible to a byte array, 
+although the conversion is not guaranteed to work.
 
 #### CurrentObject
 
 	object CurrentObject { set; }
 
-By default, object fields and list items are written with `ObjectMode.Deduplicate` which ensures each distinct object is written only once, on first encounter; later references become back-references, so shared and even *cyclic* object graphs round-trip correctly. All bundled formats support this (`SupportsDeduplication == true`).
+By default, object fields and list items are written with `ObjectMode.Deduplicate` which 
+ensures each distinct object is written only once, on first encounter; later references become 
+back-references, so shared and even *cyclic* object graphs round-trip correctly. All bundled 
+formats support this (`SupportsDeduplication == true`).
 
-However, when **reading** a type that can participate in a cycle, your synchronizer must set `sm.CurrentObject = obj` **before** synchronizing fields that could refer back to it. This registers the instance so back-references to it can be resolved while its own fields are still being read.
+However, when **reading** a type that can participate in a cycle, your synchronizer must set 
+`sm.CurrentObject = obj` **before** synchronizing fields that could refer back to it. This 
+registers the instance so back-references to it can be resolved while its own fields are 
+still being read.
 
 ### Primitive Sync methods
 
@@ -202,9 +262,13 @@ Here are the supported primitive types, nullable or not:
         $T? Sync(FieldId name, $T? savable);
     }
 
-Every `Sync` method takes a `FieldId`, a struct holding a `string Name` and `int Id`. A plain string converts implicitly to `FieldId`, `("Name", 5)` tuples supply an explicit ID, and a `Symbol` from a private `SymbolPool` can supply both. You can also write `new("Name", 5)` to construct `FieldId` directly (potentially faster).
+Every `Sync` method takes a `FieldId`, a struct holding a `string Name` and `int Id`. A plain 
+string converts implicitly to `FieldId`, `("Name", 5)` tuples supply an explicit ID, and a 
+`Symbol` from a private `SymbolPool` can supply both. You can also write `new("Name", 5)` to 
+construct `FieldId` directly (potentially faster).
 
-SyncJson uses only the `Name`, SyncProtobuf uses only the `Id`, and SyncBinary ignores both. Pass `null` to read the next field in the data stream, regardless of its name.
+SyncJson uses only the `Name`, SyncProtobuf uses only the `Id`, and SyncBinary ignores both. 
+Pass `null` to read the next field in the data stream, regardless of its name.
 
     string? Sync(FieldId name, string? savablem, ObjectMode mode = ObjectMode.Normal);
 
@@ -212,7 +276,9 @@ Set `mode` to `ObjectMode.Deduplicate` to request string deduplication, if suppo
 
 ### Bitfields methods
 
-You can request that your integers be stored in fixed-size bitfields, which can save space in `SyncBinary`. Sync managers that don't support this will simply ignore the `bits` and `signed` parameters.
+You can request that your integers be stored in fixed-size bitfields, which can save space in 
+`SyncBinary`. Sync managers that don't support this will simply ignore the `bits` and `signed`
+parameters.
 
 	define bitfieldTypes => #splice(int, long, BigInteger);
 
@@ -230,7 +296,8 @@ These members are used by extension methods; don't call them:
 
 ### Extension methods for subobjects
 
-When a property has a composite type (object/tuple), the recommended way to synchronize it is by providing the synchronizer delegate/object as a third argument, as shown here for `obj.Address`:
+When a property has a composite type (object/tuple), the recommended way to synchronize it is by 
+providing the synchronizer delegate/object as a third argument, as shown here for `obj.Address`:
 
 	public class Person
 	{
@@ -248,27 +315,38 @@ When a property has a composite type (object/tuple), the recommended way to sync
         return obj;
     }
 
-You can omit the third argument by calling `SyncDyn` instead of `Sync` and using `TypeTagAttribute` (see below), at some performance cost. Also see below about synchronizing `record`s like `Address`.
+You can omit the third argument by calling `SyncDyn` instead of `Sync` and using `TypeTagAttribute`
+(see below), at some performance cost. Also see below about synchronizing `record`s like `Address`.
 
 ### Extension methods for collections
 
-There are hundreds of extension methods for `ISyncManager`, most of which help read/write collections. It's impractical for SyncLib to support everything because its types are invariant, not covariant. See, a normal API like `void Write(IList<long> list)` can accept any kind of `IList` as a parameter, but the equivalent in SyncLib,
+There are hundreds of extension methods for `ISyncManager`, most of which help read/write 
+collections. It's impractical for SyncLib to support everything because its types are invariant, 
+not covariant. See, a normal API like `void Write(IList<long> list)` can accept any kind of 
+`IList` as a parameter, but the equivalent in SyncLib,
 
 	public static IList<long>? SyncList<SM>(this SM sync, 
 		  FieldId name, IList<long>? savable, 
 		  ObjectMode listMode = ObjectMode.List, int tupleOrListLength = -1)
 
-cannot support `List<long>`, because given `List<long> nums`, `nums = sm.SyncList("nums", nums)` would not compile (and the method would not know what kind of list it should create when reading). Thus SyncLib offers separate methods for `IList<long>` `IReadOnlyList<long>`, `ICollection<long>`, `List<long>`, and so on. The methods are specialized not just for each collection type, but also for each primitive type.
+cannot support `List<long>`, because given `List<long> nums`, `nums = sm.SyncList("nums", nums)` 
+would not compile (and the method would not know what kind of list it should create when reading).
+Thus SyncLib offers separate methods for `IList<long>` `IReadOnlyList<long>`, `ICollection<long>`,
+`List<long>`, and so on. The methods are specialized not just for each collection type, but also 
+for each primitive type.
 
-The extension methods have a few different names, just so that the total number of extension methods with the _same_ name isn't as extreme:
+The extension methods have a few different names, just so that the total number of extension 
+methods with the _same_ name isn't as extreme:
 
 - SyncList: synchronize an IList, IReadOnlyList, `List<T>`, or other list type (75 overloads)
 - SyncArray: synchronize an array (15 overloads)
 - SyncColl: synchronize an IEnumerable, ICollection, HashSet, or other collection type (69 overloads)
-- SyncDict: synchronize a IDictionary, Dictionary, or other dictionary type (6 overloads - this group is simpler because items are never primitive types, but rather `KeyValuePair`)
+- SyncDict: synchronize a IDictionary, Dictionary, or other dictionary type (6 overloads - 
+  this group is simpler because items are never primitive types, but rather `KeyValuePair`)
 - SyncMemory: Synchronize a Memory or ReadOnlyMemory (36 overloads)
 
-**For collections of non-primitive types**, provide another synchronizer function or object as the third parameter:
+**For collections of non-primitive types**, provide another synchronizer function or object as 
+the third parameter:
 
     obj.Addresses = sm.SyncList("Addresses", obj.Addresses, SyncAddress);
 
@@ -278,24 +356,30 @@ The third parameter must conform to one of thee types; see "Types of synchronize
 	public interface ISyncObject<SyncManager, T> { T Sync(SyncManager sync, T? value); }
 	public interface ISyncField<SyncManager, T> { T? Sync(ref SyncManager sync, FieldId name, T? value); }
 
-Note: Lists of bytes, bools and chars are special-cased, so that `SyncJson` can store both byte arrays/lists and char arrays/lists as strings (depending on the `CharListAsString`, `ByteArrayMode` and `NewtonsoftCompatibility` options)
+Note: Lists of bytes, bools and chars are special-cased, so that `SyncJson` can store both 
+byte arrays/lists and char arrays/lists as strings (depending on the `CharListAsString`, 
+`ByteArrayMode` and `NewtonsoftCompatibility` options)
 
 ### More extension methods
 
-- `SyncRef` synchronizes a field with `ref` so you needn't mention it twice: `sm.SyncRef("X", ref obj.X)` (15 overloads)
-- `SyncEnumAsString(name, e)`: synchronizes an enum as a string (for more, see recipe below about synchronizing enums)
-- `SyncDateAsString(name, dt, preferredFormat?, parseMode?)` uses ISO-8601 by default
-- `SyncDateAsDayNumber(name, dt, asInt32)` uses OLE Automation day numbers (floating point).
-- `SyncTimeAsString`, `SyncTimeAsSeconds`, `SyncTimeAsMinutes`, `SyncTimeAsDays` synchronizes `TimeSpan` in your unit of choice.
+- `Sync` extension methods exist for `DateTime`, `DateTimeOffset`, `TimeSpan`, and custom 
+  implementations of `ISyncObject<SM, T>` and `ISyncField<SM, T>`
+- `SyncRef` synchronizes a field with `ref` so you needn't mention it twice: 
+  `sm.SyncRef("X", ref obj.X)` (15 overloads)
+- `SyncAsString(name, e)`: synchronizes an enum, DateTime, DateTimeOffset, or TimeSpan as a
+  string (Newtonsoft-compatible ISO-8601 for dates; see recipe below about synchronizing enums)
+- `SyncAsDayNumber(name, dateTime, asInt32)` uses OLE Automation day numbers (floating point).
 
 Other stuff
 -----------
 
 ### ObjectMode
 
-Many Sync functions accept an `ObjectMode` as the third or fourth argument: `sm.Sync("Border", obj.Border, SyncShape, mode)`.
+Many Sync functions accept an `ObjectMode` as the third or fourth argument: 
+`sm.Sync("Border", obj.Border, SyncShape, mode)`.
 
-The three basic modes are Normal, List and Tuple, which are mutually exclusive; the other values are flags that can be combined with the three basic kinds.
+The three basic modes are Normal, List and Tuple, which are mutually exclusive; the other 
+values are flags that can be combined with the three basic kinds.
 
 | Flag | Meaning |
 |---|---|
@@ -308,7 +392,9 @@ The three basic modes are Normal, List and Tuple, which are mutually exclusive; 
 | `ReadNullAsDefault` | When reading null into a value type, return `default` instead of throwing |
 | `NoTypeTag` | Suppress the type tag a tagged synchronizer would otherwise write (see [Dynamic typing](#dynamic-typing-uncommitted)) |
 
-Collections of non-primitive types have **two** ObjectModes: the `itemMode` (mode of the individual elements) and the `listMode` (mode of the list object itself), which are given in that order, e.g.
+Collections of non-primitive types have **two** ObjectModes: the `itemMode` (mode of the 
+individual elements) and the `listMode` (mode of the list object itself), which are given 
+in that order, e.g.
 
     public static List<T>? SyncList<SM, T, SyncObj>(this SM sync,
         FieldId name, List<T>? savable, SyncObj syncItem,
@@ -344,15 +430,25 @@ Recipes
         return sm.IsWriting ? obj : new Address(number ?? "", street ?? "", city ?? "", country ?? "");
     }
 
-If there's a dummy object you can use during reading, like `Address.Empty` here, it is recommended to use `obj ??= Dummy` at the top of the synchronizer. Otherwise, you will have to use `?.` in each `Sync` call, e.g. `sm.Sync("City", obj?.City)`.
+If there's a dummy object you can use during reading, like `Address.Empty` here, it is 
+recommended to use `obj ??= Dummy` at the top of the synchronizer. Otherwise, you will have to 
+use `?.` in each `Sync` call, e.g. `sm.Sync("City", obj?.City)`.
 
 ### Synchronizing exotic collections
 
-For collections without builtin support, you have two options. Suppose you have a property `List` of type `DList<X>` that implements `IReadOnlyList<X>` where `X` is not a primitive type. Then either
+For collections without builtin support, you have two options. Suppose you have a property `List`
+of type `DList<X>` that implements `IReadOnlyList<X>` where `X` is not a primitive type. Then 
+either
 
-1. Shuffle data through another collection type, e.g. you can use `obj.List = new DList<X>(sm.SyncList("List", obj.List, SyncX))` where `SyncX` is the synchronizer for type X, assuming your collection's constructor accepts a list of `X`. If the special collection has primitive elements (`DList<int>`) you can just drop the synchronizer argument: `obj.List = new DList<X>(sm.SyncList("List", obj.List))`
+1. Shuffle data through another collection type, e.g. you can use 
+   `obj.List = new DList<X>(sm.SyncList("List", obj.List, SyncX))` where `SyncX` is the 
+   synchronizer for type X, assuming your collection's constructor accepts a list of `X`. 
+   If the special collection has primitive elements (`DList<int>`) you can just drop the 
+   synchronizer argument: `obj.List = new DList<X>(sm.SyncList("List", obj.List))`
 
-2. Provide an allocator as the fourth argument to `SyncColl`, to show it how to create your collection type directly. If you do this, C# is unfortunately unable to infer the type arguments `<SM, Coll, T>` and you will get a strange error to boot:
+2. Provide an allocator as the fourth argument to `SyncColl`, to show it how to create your 
+   collection type directly. If you do this, C# is unfortunately unable to infer the type 
+   arguments `<SM, Coll, T>` and you will get a strange error to boot:
 
     // Error CS1660: Cannot convert lambda expression to type 'ObjectMode' because it is not a delegate
 	obj.List = sm.SyncColl("List", obj.List, SyncX, capacity => new DList<X>(capacity));
@@ -361,7 +457,8 @@ Providing the type arguments manually fixes this:
 
 	obj.List = sm.SyncColl<SM, DList<X>, X>("List", obj.List, SyncX, capacity => new DList<X>(capacity));
 
-But `SyncColl` also has a special eighth argument called `ignored` (which it ignores) for solving this problem:
+But `SyncColl` also has a special eighth argument called `ignored` (which it ignores) for solving 
+this problem:
 
 	obj.List = sm.SyncColl("List", obj.List, SyncX, capacity => new DList<X>(capacity), ignored: default(Address));
 
@@ -377,7 +474,9 @@ But `SyncColl` also has a special eighth argument called `ignored` (which it ign
 	var syncAsInt = new AsISyncField<SM, EnumType>((ref SM sm, FieldId name, EnumType value) => (EnumType)sm.Sync(name, (int)value));
     obj.Enums = sm.SyncList("Enums", obj.Enums, syncAsInt);
 
-This "quick and very dirty" way of synchronizing lists of enums with `AsISyncField` is inefficient. Doing it efficiently seems to require a special function per enum because C# doesn't allow a generic method to cast an `Enum` to and from `int`:
+This "quick and very dirty" way of synchronizing lists of enums with `AsISyncField` is inefficient. 
+Doing it efficiently seems to require a special function per enum because C# doesn't allow a 
+generic method to cast an `Enum` to and from `int`:
 
     public struct SyncEnum<SM> : 
         ISyncField<SM, EnumType1>,
@@ -390,16 +489,19 @@ This "quick and very dirty" way of synchronizing lists of enums with `AsISyncFie
     // in your synchronizer
     obj.Enums = sm.SyncList("Enums", obj.Enums, new SyncEnum<SM>());
 
-The more flexible but less efficient approach uses a generic `Sync` method with a type parameter `E: Enum` that casts through `object` (`(int)(object)enumValue`). 
+The more flexible but less efficient approach uses a generic `Sync` method with a type parameter 
+`E: Enum` that casts through `object` (`(int)(object)enumValue`). 
 
 ### Custom primitive synchronizers
 
-Most of the time you'll want to use normal synchronizers which are designed for composite types and conform to this delegate or this interface:
+Most of the time you'll want to use normal synchronizers which are designed for composite types 
+and conform to this delegate or this interface:
 
 	public delegate T SyncObjectFunc<in SyncManager, T>(SyncManager sync, [AllowNull] T value);
 	public interface ISyncObject<SyncManager, T> { T Sync(SyncManager sync, T? value); }
 
-However, if you want to synchronize a type as a _primitive_ type, then you'll need to conform to _this_ delegate or interface instead:
+However, if you want to synchronize a type as a _primitive_ type, then you'll need to conform to 
+_this_ delegate or interface instead:
 
     public delegate T SyncFieldFunc_Ref<SyncManager, T>(
         ref SyncManager sync, FieldId name, [AllowNull] T value);
@@ -407,7 +509,8 @@ However, if you want to synchronize a type as a _primitive_ type, then you'll ne
 		T? Sync(ref SyncManager sync, FieldId name, T? value);
 	}
 
-and the latter is preferred. For example, to serialize a `System.Drawing.Color` as a JavaScript-like string, define this:
+and the latter is preferred. For example, to serialize a `System.Drawing.Color` as a JavaScript-
+like string, define this:
 
     public struct SyncColor<SM> : ISyncField<SM, Color> where SM : ISyncManager
     {
