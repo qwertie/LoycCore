@@ -7,7 +7,7 @@ layout: page
 Changes to Loyc Core libraries and [LES](http://loyc.net/les)
 ----------------------------------------
 
-### v30.3.0: July 27, 2026 ###
+### v30.3.1: July 27, 2026 ###
 
 Beyond minor new features such as `SyncJsonDOM.Read()`, this release adds a .NET 6 target (replacing .NET Core 3.1; netstandard2.0 and net472 builds kept), with a modernization and bug-hunting audit by Fable 5, resulting in ~50 bug fixes with regression tests confirmed to fail against the old code, many found by "randomized differential testing" against the old binaries, which Fable describes thusly:
 
@@ -41,6 +41,7 @@ Beyond minor new features such as `SyncJsonDOM.Read()`, this release adds a .NET
 
 **Loyc.Math:**
 
+- `Point<T>` and `Vector<T>` are now marked `[Serializable]` (the only change in v30.3.1 vs v30.3.0)
 - Bug fix: `Math128.Multiply` added a carry of 1 instead of 2⁹⁶ (`1 << 32` masks to 1 in C#), making 7.2% of uniform-random 64-bit multiplies wrong; also fixed its 128÷32 divide branch, its always-false range-check optimizations, and `ShiftLeftFast`/`ShiftRightFast` at shift amount 0. All of these were reachable via the public `MathEx.MulDiv`/`MulShift`. (On .NET 6 the multiply now uses `Math.BigMul`, which is 3.3× faster.)
 - Bug fix: every `FPL32` constant was wrong (`1 << Frac` masks to 1 when `Frac` is 32, so `FPL32.Unit` was 2⁻³² instead of 1), and `FPI8`/`FPI16`/`FPI23` division could overflow by shifting before widening to `long`.
 - `FPL16`/`FPL32` division now computes `(a << Frac) / b` with a 128-bit intermediate — truncating toward zero and wrapping on overflow, exactly analogous to `FPI16` — where the old code overflowed whenever |divisor| ≥ 0.5 (e.g. `(FPL32)1 / 2` returned 0).
