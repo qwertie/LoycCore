@@ -7,6 +7,89 @@ layout: page
 Changes to Loyc Core libraries and [LES](http://loyc.net/les)
 ----------------------------------------
 
+### v30.3.0: July 27, 2026 ###
+
+Beyond the new features listed below, this release retargets the .NET Core builds from .NET Core 3.1 to .NET 6, and includes a library-by-library modernization and bug-hunting audit performed with Claude (Fable 5): roughly 50 verified bug fixes, each with a regression test confirmed to fail against the old code, many found by randomized differential testing against the old binaries.
+
+#### Potentially breaking changes ####
+
+- Conceivably breaking: `MessageSink.Default` and `MessageSink.ContextToString` overrides now flow across `await` points and thread-pool continuations: they are stored in the `AsyncLocal`-based `AmbientService<T>` instead of a `ThreadLocalVariable<T>`, so an override is no longer silently lost when a task resumes on another thread. `SetDefault` keeps its documented behavior of also setting the fallback for other threads, but its return type changed from `SavedValue<IMessageSink>` to `AmbientService<IMessageSink>.Saved`.
+- The .NET Core builds now target net6.0 instead of netcoreapp3.1 (the netstandard2.0, netstandard2.1 and net472 builds are unchanged), and NuGet packages now actually include .NET 6 (before, most packages shipped only netstandard2.0 and net472).
+- LES printers now use digit separators by default: decimal literals group digits by 3 (`1_234_567`), hex by 4, binary by 8. Technically a bug fix; the `digitSeparatorChar` constructor parameter of `StandardLiteralHandlers` was previously ignored. Pass `digitSeparatorChar: null` for the old behavior.
+- Bug fix: `LNode.Equals` compared a literal's type marker against itself instead of the other node's, so string literals with different type markers (e.g. `re"x"` vs `str"x"`) wrongly compared equal in the default comparison mode.
+- `SyncBinary` now stores strings in true [WTF-8](https://simonsapin.github.io/wtf-8/) (see `WTF8Encoding` below), so strings containing unpaired UTF-16 surrogates round-trip losslessly, as the documentation always promised; previously each unpaired surrogate was silently replaced with U+FFFD. The wire format is unchanged for well-formed strings, and even for unpaired surrogates the byte count is the same.
+- `ListExt.Randomize` now uses an unbiased Fisher–Yates shuffle (the old swap-with-anyone loop was biased). A seeded `Random` produces a different shuffle than before.
+- `ReferenceComparer<T>.GetHashCode` now uses `RuntimeHelpers.GetHashCode`, so a type that overrides `GetHashCode` can no longer break the reference-identity contract (mutating an object used as a key in a `Dictionary<T,V>` with this comparer no longer loses the entry).
+- `StringBuilderExt.FirstIndexOf(char)` returns `null` instead of -1 when the character is not found, as documented and as the other overloads already did.
+- `System.Runtime.Serialization.ObjectIDGenerator` (obsolete as of .NET 8) is no longer used; the new public class `Loyc.SyncLib.Impl.ObjectIdGenerator` replaces it. Also, `ThreadEx.Abort` and `Exception.PreserveStackTrace()` are now `[Obsolete]` (both were already nonfunctional on .NET Core).
+
+**Loyc.Essentials:**
+
+- Added `Loyc.WTF8Encoding`, a high-performance `System.Text.Encoding` subclass implementing [WTF-8](https://simonsapin.github.io/wtf-8/): UTF-8 extended so that unpaired UTF-16 surrogates encode as themselves (3 bytes) rather than being destroyed. This makes *every* `string` round-trip losslessly through `byte[]`, which `Encoding.UTF8` does not (it silently substitutes U+FFFD). Spans without surrogates are delegated to `Encoding.UTF8`'s vectorized code paths, so well-formed text pays almost nothing for the extra capability.
+- Added `Memory2<T>`/`ReadOnlyMemory2<T>` (in `Loyc.SyncLib.Impl`): variants of `Memory<T>` whose `.Span` property is significantly cheaper, used to speed up the SyncLib readers.
+- Added `Loyc.SyncLib.Impl.ObjectIdGenerator`, a replacement for `System.Runtime.Serialization.ObjectIDGenerator` (which .NET 8 marks obsolete).
+- `AmbientService<T>` gained a `Set(newValue, alsoSetGlobalDefault)` overload that changes the fallback value for all threads while also setting the current async context's override.
+- `UString`: added `AsSpan()`; ordinal `Equals`/`StartsWith`/`EndsWith`/`IndexOf` now use vectorized span comparisons; `ToUpper` has a no-change fast path; `operator+` uses `string.Concat(span, span)` on .NET 5+.
+- Bug fix: `InternalList<T>.InsertRange`/`DList<T>.InsertRange(int, IEnumerable<T>)` inserted the collection **twice** when the source implements both `IReadOnlyCollection<T>` and `ICollection<T>` — which `Enumerable.Range` does as of .NET 9, making this easy to hit in modern apps.
+- Bug fix: `UString.Replace("", x)` looped forever; it now returns `this` as documented.
+- Bug fix: `ListExt.ReverseInPlace` threw for every list; `Repeated<T>.PopLast` recursed to `StackOverflowException` and its `Contains` ignored the count; `ListSourceAsSparse.GetEnumerator` also self-recursed.
+- Bug fix: `SymbolPool` enumerators no longer hold the pool's lock across `yield return` — an abandoned enumerator could permanently deadlock every `GSymbol.Get` call. (The tradeoff is a snapshot allocation per enumeration.)
+- Bug fix: `BaseDictionary.IsEmpty` was inverted, and its debugger display works again.
+- Bug fixes in `G`: `Log2Floor(0)` returns -1 on all targets, and `MakeValidFileName` actually replaces invalid characters.
+- Bug fixes in EnumerableExt: `ConcatNow` returned the first element repeatedly; `AdjacentPairsCircular` dropped the wrap-around pair; `IndexOfMin`/`IndexOfMax` returned the index of a leading `null`.
+- More bug fixes: `PrintHelpers` escaped control characters as decimal numbers instead of their intended form; `MemoizedTypeName` threw for non-generic types nested in generic types; `MultiMap<K,V>.Count` drifted after `ValueList.Clear`; `HashTags.CopyTo` clobbered one entry; `DList.CopyTo` mis-validated its arguments; `ByteArrayInString.Convert` ignored its `forceInitialEscape` argument; `GraphMethods` followed the wrong edge endpoint when walking upstream.
+- Performance: hot loops in `InternalList`/`InternalDList` use `Array.Copy`/`Array.IndexOf`/`Span.Clear`; `Maybe<T>` and `Either<L,R>` are `readonly struct`s; `SequenceHashCode` and friends avoid redundant work.
+
+**Loyc.Collections:**
+
+- Performance: `AList`/`BList`/`VList` node shifts use `Array.Copy` (2.8–6.4× faster at realistic node sizes), and `VList`/`FVList.Equals` no longer use exceptions as control flow (~20,000× faster when comparing mismatched types).
+
+**Loyc.Math:**
+
+- Bug fix: `Math128.Multiply` added a carry of 1 instead of 2⁹⁶ (`1 << 32` masks to 1 in C#), making **7.2% of uniform-random 64-bit multiplies wrong**; also fixed its 128÷32 divide branch, its always-false range-check optimizations, and `ShiftLeftFast`/`ShiftRightFast` at shift amount 0. All of these were reachable via the public `MathEx.MulDiv`/`MulShift`. (On .NET 6 the multiply now uses `Math.BigMul`, which is also 3.3× faster.)
+- Bug fix: every `FPL32` constant was wrong (`1 << Frac` masks to 1 when `Frac` is 32, so `FPL32.Unit` was 2⁻³² instead of 1), and `FPI8`/`FPI16`/`FPI23` division could overflow by shifting before widening to `long`.
+- `FPL16`/`FPL32` division now computes `(a << Frac) / b` with a 128-bit intermediate — truncating toward zero and wrapping on overflow, exactly analogous to `FPI16` — where the old code overflowed whenever |divisor| ≥ 0.5 (e.g. `(FPL32)1 / 2` returned 0). Also, `FPL32.CheckedCast(uint)` exists now.
+- Bug fix: `MathEx.NextLower(double)` was a verbatim copy of `NextHigher`; `Sqrt(ulong)` overflowed above 2⁶²; `RoR(long)` rotated by `32 - amount` instead of `64 - amount`.
+- Bug fix: `BoundingBoxMath.ProjectOnto` clamped X twice and never clamped Y.
+- Performance: `MathEx.CountOnes`/`Log2Floor` use hardware intrinsics on .NET 6 (≈5× faster); rotate methods compile to single instructions; `Sqrt(float)` uses `MathF`.
+
+**Loyc.Syntax:**
+
+- Bug fix: `Les2Printer` returned `""` for everything on threads other than the first one that used it (a `[ThreadStatic]` initialization bug).
+- Bug fix: `Les2Lexer.ParseIdentifier` corrupted identifiers via the `StringBuilder.Append(int)` overload (`foo` became `102oo`), and `Les2Printer` destroyed astral characters such as emoji (truncating code points to `char`).
+- Bug fix: `StreamCharSource` treated a short `Stream.Read` result as end-of-file, silently truncating input from network and decorator streams; reads now loop, and errors throw `IOException` instead of bare `Exception`.
+- Performance: printing allocates ~16% less; character-class checks use constant bitmasks instead of `HashSet`/`BitArray` (also fixing a latent `IndexOutOfRangeException` in `LesPrecedenceMap.IsOperator`); integer parsing in `ParseHelpers` detects overflow with branches instead of a try/catch per digit; `IsTriviaSymbol` uses an ordinal comparison (4.8× faster, and no longer misclassifies symbols under ICU rules).
+- `Precedence.MinValue`/`MaxValue` are now `readonly`.
+
+**Loyc.Utilities:**
+
+- The package now also ships net6.0 and netstandard2.1 builds (it was netstandard2.0-only).
+- Bug fix: `CPTrie`'s three-byte UTF-8 decoder silently corrupted every stored key containing a character ≥ U+0800; `CPBitArrayLeaf`'s clone constructor threw `NullReferenceException` for any dense node, and its `LastKeyInUse` scanned in the wrong direction. Also, `CPTrie.Contains` no longer throws for types that aren't `IComparable`.
+- Bug fix: `UG.ProcessCommandLineArguments` applied a culture-sensitive `ToLower` that defeated `caseSensitiveLongOpts` (and leaked a `StreamReader` handle).
+- Bug fix: `Statistic.Merge` computed `Max` from the `Min` fields; `TagsInWList.SetTag` appended duplicates instead of replacing the existing tag.
+- `GoInterface`: fixed a wrapper-selection bug that compared one parameter's size against itself; the factory cache is now thread-safe (`ConcurrentDictionary`, and initialization paths that raced are synchronized); generated-code requirements are declared via `[RequiresUnreferencedCode]`/`[RequiresDynamicCode]`, so trimmed/AOT apps get one clear warning instead of 18 opaque ones.
+
+**Loyc.SyncLib (SyncBinary, in Loyc.Essentials):**
+
+- Strings are now written in true WTF-8 via the new `WTF8Encoding` — see the breaking-changes note above.
+- Floats are read and written via `BitConverter.DoubleToInt64Bits`-style APIs, symmetrically; this removed a writer-only "reversed-endian FPU" correction that the reader never mirrored, so it could only have *broken* round-tripping on the exotic ARM platforms it was meant to help.
+- Bug fix: `ReadBigIntegerOrNull` could throw a raw `IndexOutOfRangeException` at end-of-input instead of a proper `FormatException`.
+- Performance: the hottest read/write paths use `BinaryPrimitives` on every target framework (previously only on some).
+
+**Loyc.SyncLib.SyncJson:**
+
+- Added `SyncJsonDOM`, which reads JSON from a `System.Text.Json.JsonDocument` or `JsonElement` that you've already parsed (e.g. one that a web framework handed to you). Its `Read`/`ReadI`/`NewReader` methods mirror `SyncJson`, and `SyncJsonDOM.Reader` understands the same conventions as `SyncJson.Reader` (`NameConverter`, `$id`/`$ref` deduplication and object cycles, Base64/BAIS byte arrays, type tags), so it can read anything `SyncJson.Writer` wrote. Because the DOM is random-access, reading fields out of order is cheap, and a `$ref` can even refer to an `$id` that appears later in the document (the streaming reader can't do that). `SyncJsonDOM` exists only in .NET Core 3+ builds, since `JsonDocument` is unavailable in .NET Standard 2.x / .NET Framework; accordingly, the NuGet package now includes a netcoreapp3.1 build alongside netstandard2.0 and net472.
+- Optimized `SyncJson.Reader`: faster integer parsing, and faster string encoding/decoding (vectorized via `Encoding.ASCII` and SIMD).
+- Numbers now parse via `Utf8Parser` and print via `Utf8Formatter`: integer writes are 2.69× faster with no per-value string allocations, and parsing is culture-invariant *by construction* — fixing bugs under locales like de-DE/fr-FR where `"1.5"` could silently read as `15`. Byte arrays encode and decode Base64 directly between UTF-8 buffers.
+- Added `Options.Read.HandleOverflow`, which controls what happens when a JSON number doesn't fit in the requested integer type. Presets: `SyncJson.Options.ThrowOnOverflow` (the default), `TruncateOnOverflow`, and `ClampOnOverflow`.
+- Bug fix (denial of service): a `null` list element — or a malformed token starting with `n` that was misdetected as null — was returned by `BeginSubObject` without advancing the reader, so reading such a list looped for ~90 seconds and allocated gigabytes. Genuine `null` elements in lists of objects now read correctly, and malformed ones fail fast.
+- Bug fix: when writing a string containing an unpaired surrogate, `SyncJson.Writer` reserved buffer space for the character's raw UTF-8 form although it actually writes a 6-byte `\uXXXX` escape, causing `IndexOutOfRangeException` when the output buffer had no slack (found by the new fuzz tests).
+- Bug fix: reading properties out of order could crash with a buffer-sizing error when the property name's escaped length hit an unlucky value (a multiple of 8, minus 1).
+
+**Loyc.SyncLib.SyncProtobuf:**
+
+- Performance: little-endian primitives via `BinaryPrimitives`, allocation-free float writes on the shipped builds, and single-pass field indexing for out-of-order reads.
+
 ### v30.2: July 24, 2026 ###
 
 **Loyc.SyncLib (new!):**

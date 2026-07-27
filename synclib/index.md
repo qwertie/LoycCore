@@ -280,6 +280,8 @@ Shared business classes (`Calendar` and `CalendarEntry`) are the same for both a
 
 ## And it's fast!
 
+Within each group of bars, binary serializers are on the left and plain-text serializers are on the right. SyncLib serializers are blue/green.
+
 ![Benchmarks 1](benchmark1.png)
 ![Benchmarks 2](benchmark2.png)
 ![Benchmarks 3](benchmark3.png)

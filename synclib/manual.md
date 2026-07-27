@@ -24,7 +24,7 @@ transformations, while getting great performance.
 The library ships in three assemblies (all in the `Loyc.SyncLib` namespace):
 
 - **Loyc.Essentials.dll**: The core interfaces and helpers, plus the **SyncBinary** format
-- **Loyc.SyncLib.SyncJson.dll**: The **SyncJson** format (JSON + JSON Schema)
+- **Loyc.SyncLib.SyncJson.dll**: The **SyncJson** format (JSON + JSON Schema), plus **SyncJsonDOM** for reading from a `System.Text.Json.JsonDocument` (.NET Core 3+ builds only)
 - **Loyc.SyncLib.SyncProtobuf.dll**: The **SyncProtobuf** format (Protocol Buffers + .proto schema)
 
 Low-level building blocks live in `Loyc.SyncLib.Impl` (summarized [at the end](#the-implementation-layer-loycsynclibimpl)).
@@ -225,7 +225,8 @@ do extra work if you skip any field while reading, because they are designed to 
 data from an `IScanner<byte>`. For example, if the data stream has 
 `{ "A": {"subobject": true, ...}, "B": 7 }` and you read "B" without reading "A", `SyncJson` 
 will save the JSON data for "A" in memory, just in case you do read it later. Simple sync 
-managers like the `Person` example above normally avoid this cost.
+managers like the `Person` example above normally avoid this cost. (Exception: `SyncJsonDOM.Reader` 
+reads from a pre-parsed `JsonDocument`, so out-of-order reads are simple property lookups.)
 
 `GetFieldType` gets a general type category for a field, `SyncType.Unknown` if getting types 
 is not supported, or `SyncType.Missing` if the field is absent or if it is incompatible with 
@@ -549,6 +550,8 @@ Sync Manager implementations
 
 **Performance notes.** The reader makes a single forward pass; reading fields in the written order is fastest. Out-of-order reads work but buffer the skipped fields in memory. Files over 2 GB are readable if no single out-of-order scan spans 2 GB.
 
+**SyncJsonDOM.** If (part of) a document was already parsed by System.Text.Json — say, a web framework handed you a `JsonElement`, or you inspected the JSON to decide how to deserialize it — the `SyncJsonDOM` class reads it without re-parsing: `SyncJsonDOM.Read<T>(docOrElement, sync, options?)` / `ReadI` / `NewReader` mirror the `SyncJson` methods, and `SyncJsonDOM.Reader` understands the same conventions (`NameConverter`, `$id`/`$ref` deduplication, byte-array encodings, type tags), so it can read anything `SyncJson.Writer` wrote. Since the DOM is random-access, out-of-order reads are cheap, and a `$ref` can even refer to an `$id` that appears later in the document. Note: syntax rules are System.Text.Json's (options like `Read.Strict` and `Read.AllowComments` only influence the overloads that parse text), and it is available only in .NET Core 3+ builds, because `JsonDocument` doesn't exist in .NET Standard 2.x or .NET Framework. Prefer plain `SyncJson` when your input is bytes or text — parsing a DOM first is slower.
+
 **Schema mode.** `SyncJson.WriteSchema<T>(syncFunc, options?)` / `WriteSchemaString` / `NewSchemaWriter` run your synchronizer once with **no data** (`SyncMode.Schema`) and emit a JSON Schema (draft 2020-12) describing exactly what the writer would produce with the same options — including name conversion, dedup markers and byte-array encoding. Each type becomes a `$defs` entry (named after the .NET type, or the type tag if one is set), referenced by `$ref`, so recursive types work. Synchronizing one type in two conflicting ways throws. Being data-blind, it records only the code path taken with default values — conditional fields and non-default polymorphic branches are not captured.
 
 ### SyncBinary
@@ -556,6 +559,8 @@ Sync Manager implementations
 `SyncBinary.Write`/`WriteI`/`Read`/`ReadI` plus `NewWriter(IBufferWriter<byte>, Options?)`/`NewReader(...)`; the reader can stream files of unlimited size.
 
 The format stores **no metadata** — no field names, lengths only where needed, schema entirely in your code. That makes it very fast and compact, but unforgiving: fields must be read in the order written, with the same (or a compatible) type, or you get an exception — or garbage.
+
+**Strings** are stored in [WTF-8](https://simonsapin.github.io/wtf-8/) — UTF-8 extended so that unpaired UTF-16 surrogates encode as themselves — so *any* .NET string round-trips losslessly, even a malformed one (as of v30.3; earlier versions replaced unpaired surrogates with U+FFFD, like `Encoding.UTF8`). Well-formed strings are byte-for-byte ordinary UTF-8. The codec is the public class `Loyc.WTF8Encoding`, usable on its own.
 
 **Compatible type changes** certain changes can be made safely: enlarging integer types (`short`→`int`→`long`→`BigInteger`); `T`↔`T?` for integers, floats, `double`, `decimal`; bool↔integer; `char`↔`ushort`; `string`↔`byte[]`; signed→unsigned *only* if no negative values were ever stored (never the reverse). Floats cannot be enlarged to doubles, and bitfields cannot change size. Everything else needs explicit versioning code.
 
