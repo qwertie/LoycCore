@@ -7,12 +7,16 @@ layout: page
 Changes to Loyc Core libraries and [LES](http://loyc.net/les)
 ----------------------------------------
 
-### v30.3.2: July 28, 2026 ###
+### v30.3.3: July 28, 2026 ###
+
+- Restore overload `EnumerableExt.ForEach(this IEnumerable<T>, Action<T,int>)` that was accidentally removed from ~v30.3.0
+
+### v30.3.2: July 27, 2026 ###
 
 - Added `MultiMap<K,V>.Groups` which returns `this` as `IReadOnlyDictionary<K, ValueList>`, and `MultiMap<K,V>.ValueList` now implements `IReadOnlyCollection<V>` and its new `GetList()` method returns the underlying `List<V>`.
 - `Point<T>` and `Vector<T>` are now marked `[Serializable]` (the only change in v30.3.1 vs v30.3.0)
 
-### v30.3.1: July 27, 2026 ###
+### v30.3.0: July 26, 2026 ###
 
 Beyond minor new features such as `SyncJsonDOM.Read()`, this release adds a .NET 6 target (replacing .NET Core 3.1; netstandard2.0 and net472 builds kept), with a modernization and bug-hunting audit by Fable 5, resulting in ~50 bug fixes with regression tests confirmed to fail against the old code, many found by "randomized differential testing" against the old binaries, which Fable describes thusly:
 
