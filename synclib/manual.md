@@ -391,7 +391,7 @@ values are flags that can be combined with the three basic kinds.
 | `NotNull` | Object cannot be null (avoids boxing value types when used without `Deduplicate`) |
 | `Compact` | Avoids writing newlines when used with `SyncJson`; ignored by `SyncBinary` and `SyncProtobuf` |
 | `ReadNullAsDefault` | When reading null into a value type, return `default` instead of throwing |
-| `NoTypeTag` | Suppress the type tag a tagged synchronizer would otherwise write (see [Dynamic typing](#dynamic-typing-uncommitted)) |
+| `NoTypeTag` | Suppress the type tag a tagged synchronizer would otherwise write (see [Dynamic typing](#dynamic-typing-experimental)) |
 
 Collections of non-primitive types have **two** ObjectModes: the `itemMode` (mode of the 
 individual elements) and the `listMode` (mode of the list object itself), which are given 
@@ -587,24 +587,78 @@ The [detailed documentation](https://github.com/qwertie/ecsharp/blob/master/Core
 Dynamic typing (experimental)
 -----------------------------
 
-Everything above is *statically typed*: each call site names one synchronizer, so a field declared `Shape` always round-trips as the synchronizer's exact type. The dynamic-typing layer adds polymorphism — serializing `Ellipse` and `Polygon` through a `Shape`-typed field — without putting any serialization attributes on your business classes. It builds on `ISyncManager.SyncTypeTag(string?)`, which every format already implements (JSON: a `"$type"`/`"\t"` property; SyncBinary: an optional `'T'`-marked string; SyncProtobuf: reserved field `_type`).
+Everything above is *statically typed*: each call site names one synchronizer, so a field declared `Shape` always round-trips as that synchronizer's exact type. The dynamic-typing layer adds polymorphism — storing an `Ellipse` or a `Polygon` in a `Shape`-typed field — without putting any serialization attributes on your business classes. It builds on `ISyncManager.SyncTypeTag(string?)`, which every format already implements (JSON: a `"$type"`/`"\t"` property; SyncBinary: an optional `'T'`-marked string; SyncProtobuf: reserved field `_type`). You never call `SyncTypeTag` yourself; SyncLib writes and reads the tag for you.
+
+Which call you use for a field depends on what you know about that field's type at compile time:
+
+| What you know about the field | Call to use |
+|-------------------------------|-------------|
+| Its declared type is the concrete type being stored | `sm.Sync(name, value, ConcreteSync)` — the static tier |
+| Its declared type is a base class or interface, and the runtime type varies | `sm.SyncDyn(name, value)` |
+| It is a list, array or collection whose element type varies | `sm.SyncDynList(name, list)` |
+
+The `Drawing` class below has one member of each kind:
+
+~~~csharp
+public class Shape   { public int Id; }
+public class Ellipse : Shape { public double W, H; }
+public class Polygon : Shape { public int N; }
+
+public class Drawing {
+    public Ellipse? Border;            // always an ellipse
+    public Shape? Highlight;           // any kind of shape
+    public List<Shape> Shapes = new(); // shapes of mixed kinds
+}
+~~~
+
+Write **one synchronizer per concrete type** and give each one a `[TypeTag]`:
 
 ~~~csharp
 static class ShapeSync<SM> where SM : ISyncManager
 {
     [TypeTag("Ellipse")]
-    public static Ellipse Sync(SM sm, Ellipse? e) { ... ordinary synchronizer ... }
+    public static Ellipse Sync(SM sm, Ellipse? e) {
+        sm.CurrentObject = e ??= new Ellipse();
+        e.Id = sm.Sync("Id", e.Id);
+        e.W  = sm.Sync("W", e.W);
+        e.H  = sm.Sync("H", e.H);
+        return e;
+    }
     [TypeTag("Polygon")]
-    public static Polygon Sync(SM sm, Polygon? p) { ... }
+    public static Polygon Sync(SM sm, Polygon? p) {
+        sm.CurrentObject = p ??= new Polygon();
+        p.Id = sm.Sync("Id", p.Id);
+        p.N  = sm.Sync("N", p.N);
+        return p;
+    }
 }
 
-// Registration, typically at startup (dynamic tier only):
+// Registration, typically at startup (needed by the dynamic tier only):
 TypeSyncRegistry.Default.Add(typeof(ShapeSync<>));
 
-// In a synchronizer:
-d.Border = sm.Sync("Border", d.Border, ShapeSync<SM>.Sync); // static tier: tag written & verified
-d.Shapes = sm.SyncDynList("Shapes", d.Shapes);          // dynamic tier: dispatch by type/tag
+// Drawing's own synchronizer then uses all three forms:
+public static Drawing Sync<SM>(SM sm, Drawing? d) where SM : ISyncManager {
+    sm.CurrentObject = d ??= new Drawing();
+    d.Border    = sm.Sync("Border", d.Border, ShapeSync<SM>.Sync); // Border is declared Ellipse
+    d.Highlight = sm.SyncDyn("Highlight", d.Highlight);            // one shape, kind unknown
+    d.Shapes    = sm.SyncDynList("Shapes", d.Shapes) ?? new();     // many shapes, kinds unknown
+    return d;
+}
 ~~~
+
+`Border` uses the static tier because the field is declared `Ellipse`, so `ShapeSync<SM>.Sync` resolves to the `Ellipse` overload; that overload's tag is written, and when reading, the tag found in the stream is checked against it. `Highlight` and `Shapes` use the dynamic tier: when writing, the value's `GetType()` selects the synchronizer and its tag is recorded; when reading, the tag from the stream selects the synchronizer. Both tiers write the same tag in the same place, so a field can move between them later without invalidating existing data.
+
+`SyncDyn` and `SyncDynList` default to `ObjectMode.Deduplicate`, so a shape reachable from two members is written once and both members refer to one instance after reading:
+
+~~~json
+{"Border":   {"$id":"1","$type":"Ellipse","Id":1,"W":3,"H":4},
+ "Highlight":{"$id":"2","$type":"Polygon","Id":3,"N":5},
+ "Shapes":  [{"$ref":"2"},{"$id":"3","$type":"Ellipse","Id":2,"W":1,"H":1}]}
+~~~
+
+**A base-typed field that only ever holds one subclass.** `sm.Sync(name, value, syncFunc)` never *chooses* a synchronizer — the one you name is the one that runs — so it cannot be applied to a `Shape`-typed field directly: `ShapeSync<SM>` has no `Sync(SM, Shape?)` overload, so the method group fails to bind and the call does not compile. When the field is declared `Shape` but you know it holds an `Ellipse`, cast at the call site to select the overload: `sm.Sync("Highlight", (Ellipse?)d.Highlight, ShapeSync<SM>.Sync)`. That is worth doing only to skip the registry lookup, or to have a wrong tag reported at this field rather than accepted. If the runtime type can genuinely vary, use `SyncDyn`.
+
+**When the base class is itself instantiable.** If `Shape` is concrete and real `Shape` instances occur, register a synchronizer for `Shape` too, with its own tag. Doing so also gives untagged input a home: on reading, a sub-object with no tag falls back to the statically expected type, so foreign JSON such as `{"Highlight":{"Id":9}}` reads as a `Shape`.
 
 **The three tiers:**
 
@@ -617,7 +671,15 @@ d.Shapes = sm.SyncDynList("Shapes", d.Shapes);          // dynamic tier: dispatc
 - `TypeSyncRegistry` maps types → synchronizers. `Add(typeof(ShapeSync<>))` scans a class for `T Sync(SM, T)` bodies and `ISyncObject` implementations; `Add<T>(tag, delegate)` is the one-line easy mode. Discovered tags are forwarded to the ambient tag registry, so one call registers both halves.
 - `TypeTagRegistry` owns the tag↔`Type` dictionary, the `[TypeTag]`-attribute convention (`virtual AttributeTagOf` — override to derive tags some other way), and the error policies: `UnknownTag` (tag not registered — throws by default; override to substitute a type or fall back) and `TagMismatch` (static read found a different tag — throws by default; override to proceed anyway).
 
-`[TypeTag("...")]` goes on **synchronizer methods or structs, never on your data types** — business objects stay clean. Using SyncLib entirely *without* this feature is unchanged: don't register anything, don't use `SyncDyn`, and (as before) call `sm.SyncTypeTag(tag)` manually if you want to hand-roll polymorphism.
+**Errors.** Nothing is silently downgraded to the base class:
+
+| Situation | Exception |
+|-----------|-----------|
+| Writing a runtime type that has no registered synchronizer | `NotSupportedException: Cannot synchronize 'Highlight' dynamically: Blob is not registered in the SyncTypeRegistry.` |
+| Reading a tag that is not registered | `FormatException: 'Highlight' contains an object tagged 'Blob', which is not registered in the current TypeTagRegistry.` |
+| Reading an untagged sub-object whose static type is unregistered (e.g. `Shape` is abstract) | `FormatException: 'Highlight' has no type tag, and Shape itself is not registered in the SyncTypeRegistry.` |
+
+`[TypeTag("...")]` goes on **synchronizer methods or structs, never on your data types** — business objects stay clean. Using SyncLib entirely *without* this feature is unchanged: don't register anything, don't use `SyncDyn`, and (as before) call `sm.SyncTypeTag(tag)` manually if you want to hand-roll polymorphism — a low-level technique that is incompatible with dynamic typing, because a reader must know the tag *before* it can choose which synchronizer to invoke.
 
 
 Implementation helpers: Loyc.SyncLib.Impl
