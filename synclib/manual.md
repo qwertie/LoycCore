@@ -599,7 +599,7 @@ static class ShapeSync<SM> where SM : ISyncManager
 }
 
 // Registration, typically at startup (dynamic tier only):
-SyncTypeRegistry.Default.Add(typeof(ShapeSync<>));
+TypeSyncRegistry.Default.Add(typeof(ShapeSync<>));
 
 // In a synchronizer:
 d.Border = sm.Sync("Border", d.Border, ShapeSync<SM>.Sync); // static tier: tag written & verified
@@ -614,7 +614,7 @@ d.Shapes = sm.SyncDynList("Shapes", d.Shapes);          // dynamic tier: dispatc
 
 **The two registries** (both ambient services with `Default`/`SetDefault`, copy-on-write, thread-safe, late registration supported):
 
-- `SyncTypeRegistry` maps types → synchronizers. `Add(typeof(ShapeSync<>))` scans a class for `T Sync(SM, T)` bodies and `ISyncObject` implementations; `Add<T>(tag, delegate)` is the one-line easy mode. Discovered tags are forwarded to the ambient tag registry, so one call registers both halves.
+- `TypeSyncRegistry` maps types → synchronizers. `Add(typeof(ShapeSync<>))` scans a class for `T Sync(SM, T)` bodies and `ISyncObject` implementations; `Add<T>(tag, delegate)` is the one-line easy mode. Discovered tags are forwarded to the ambient tag registry, so one call registers both halves.
 - `TypeTagRegistry` owns the tag↔`Type` dictionary, the `[TypeTag]`-attribute convention (`virtual AttributeTagOf` — override to derive tags some other way), and the error policies: `UnknownTag` (tag not registered — throws by default; override to substitute a type or fall back) and `TagMismatch` (static read found a different tag — throws by default; override to proceed anyway).
 
 `[TypeTag("...")]` goes on **synchronizer methods or structs, never on your data types** — business objects stay clean. Using SyncLib entirely *without* this feature is unchanged: don't register anything, don't use `SyncDyn`, and (as before) call `sm.SyncTypeTag(tag)` manually if you want to hand-roll polymorphism.
