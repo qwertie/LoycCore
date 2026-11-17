@@ -7,6 +7,32 @@ layout: page
 Changes to Loyc Core libraries and [LES](http://loyc.net/les)
 ----------------------------------------
 
+### v30.4.0: November 16, 2026 ###
+
+Mostly SyncLib bug fixes and performance work. It started with a report that reading a `Dictionary<int, byte[]>` with `SyncBinary` was oddly slow; that case is now 15× faster (603 → 41 ns per entry).
+
+**Loyc.SyncLib (in Loyc.Essentials):**
+
+- **Breaking** (`SyncBinary` format): lists of bytes (`byte[]`, `List<byte>`, `Memory<byte>`, etc.) are now stored as raw bytes after the length prefix, the same format as a string. Previously each byte was a variable-length integer, so bytes ≥ 0x80 took two bytes. Also, list lengths are now written as unsigned numbers, as string lengths already were, so lengths 64 to 127 take one byte fewer. Together, these make it possible to change a string into a byte list (or vice versa), as the documentation already claimed.
+- **Breaking** (`SyncBinary` format, edge case): a series of bitfields that share a byte now ends when the root object or list ends.
+- Bug fix: reading `SyncBinary` from a stream (an `IScanner<byte>` such as `StreamScanner`) took quadratic time because data that had already been read was never unloaded. Reading a 1.2 MB stream took 2.8 seconds and allocated 22 GB; now it takes 17 ms and 1.7 MB.
+- Bug fix: a list read with `ObjectMode.Deduplicate` couldn't be back-referenced: `SyncBinary` and `SyncJson` reported "back-reference not found", and `SyncJsonDOM` silently made a copy.
+- Bug fix: `DefaultSynchronizer` gave special treatment (e.g. raw bytes in `SyncBinary`, a `bytes` field in `SyncProtobuf`, Base64/BAIS in `SyncJson`) only to `byte[]`, `char[]` and `bool[]`. `List<T>`, `IList<T>`, `IReadOnlyList<T>` and `HashSet<T>` of these types were written one item at a time, in a different format than `SyncList` uses.
+- Bug fix: writing after `Writer.Flush()` overwrote output that had already been flushed. Also, in `SyncBinary`, writing a bitfield after `Flush()` threw `IndexOutOfRangeException`.
+- Security: a corrupt or malicious length prefix can no longer cause a huge allocation. Lists are preallocated up to `ListLoader.MaxPreallocationBytes` (16 MiB) and grow as items are actually read, and when reading from a stream, a long byte list or string is read in chunks instead of asking the stream for the whole length at once.
+- Performance: `SyncBinary` now preallocates lists, since `SyncBinary.Reader.MinimumListLength` reports the length prefix. Bool lists are read and written in bulk (3.5× faster), and byte lists are copied in one step via the new `IListBuilder.AddRange` (reading a 50 MiB `byte[]` went from 28 ms to 2.1 ms).
+- Writers in all three formats now flush when the root object or list ends (`SyncJson` already did), so code that uses a writer from `NewWriter` only needs to call `Flush()` if the root value is a primitive. This is now documented on each `NewWriter`.
+- `MinimumListLength` is now `null` when not reading a list, as documented. (`SyncBinary`'s threw at the root.)
+- **Possibly breaking**: added `IListBuilder<TList, T>.AddRange(ReadOnlySpan<T>)`, which you'll need to implement if you implemented `IListBuilder` yourself. Also added `InternalList<T>.AddRange(ReadOnlySpan<T>)`.
+- Added `ignored` parameters to some `SyncColl` overloads, to help C# infer `T`.
+
+**Loyc.SyncLib.SyncJson:**
+
+- Byte and char lists that are written as strings are now deduplicated by `ObjectMode.Deduplicate`: the first reference is wrapped in an object, e.g. `{"\f": 1, "": "..."}`, and later references are written as back-references. In Newtonsoft mode they are not deduplicated, because Json.NET doesn't do that.
+- Bug fix: a deduplicated char list written as a JSON array couldn't be read.
+- Bug fix: a long string could overflow the output buffer (`IndexOutOfRangeException`) because the writer didn't reserve space for its quotes (found by the fuzz tests).
+- Performance: the writer now buffers its output instead of calling `IBufferWriter.Advance` and `GetMemory` before every token. Writing a `Dictionary<int, int>` is about 1.8× faster.
+
 ### v30.3.3: July 28, 2026 ###
 
 - Restore overload `EnumerableExt.ForEach(this IEnumerable<T>, Action<T,int>)` that was accidentally removed from ~v30.3.0

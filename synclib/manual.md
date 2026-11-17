@@ -134,7 +134,7 @@ instead (they cannot have the same name due to a limitation of the C# language).
 Sync managers should offer these overloads (where `Options` is specific to the data format, 
 e.g. `SyncJson.Options`):
 
-    // All formats
+    // All formats (except SyncJsonDOM)
     public static T? Read<T>(ReadOnlyMemory<byte> input, SyncObjectFunc<Reader, T> sync, Options? options = null)
     public static T? ReadI<T>(ReadOnlyMemory<byte> input, SyncObjectFunc<ISyncManager, T> sync, Options? options = null)
 	public static T? Read<T, SyncObject>(ReadOnlyMemory<byte> input, SyncObject sync, Options? options = null) where SyncObject : ISyncObject<Reader, T>
@@ -359,7 +359,8 @@ The third parameter must conform to one of thee types; see "Types of synchronize
 
 Note: Lists of bytes, bools and chars are special-cased, so that `SyncJson` can store both 
 byte arrays/lists and char arrays/lists as strings (depending on the `CharListAsString`, 
-`ByteArrayMode` and `NewtonsoftCompatibility` options)
+`ByteArrayMode` and `NewtonsoftCompatibility` options), and so that `SyncBinary` can store
+byte lists as raw bytes and read and write bool lists in bulk.
 
 ### More extension methods
 
@@ -540,33 +541,66 @@ and then synchronize a field of type `Color` like this:
 Sync Manager implementations
 ----------------------------
 
-### SyncJson
+### Loyc.SyncLib.SyncJson
 
-`SyncJson.Write`/`WriteI` produce UTF-8 bytes; `WriteString`/`WriteStringI` produce a `string`; `Read`/`ReadI` accept either. `NewWriter(IBufferWriter<byte>?, Options?)` and `NewReader(...)` support streaming. `SyncJson.ToCamelCase` is a ready-made name converter.
+`SyncJson.Write`/`WriteI` (see method list above) produce UTF-8 bytes; `WriteString`/`WriteStringI` produce a `string`; `Read`/`ReadI` accept either. `SyncJson.ToCamelCase` is a ready-made name converter.
 
-**Options** (top level): `NewtonsoftCompatibility` (default **true**), `NameConverter` (e.g. `SyncJson.ToCamelCase`), `RootMode`, `ByteArrayMode`. Writer options (`Options.Write`): `Minify`, `Newline`, `Indent`, `SpaceAfterColon`, `EscapeUnicode`, `MaxIndentDepth`, `CharListAsString`, `InitialBufferSize`. Reader options (`Options.Read`): `AllowComments` (default true), `Strict` (default false — tolerates trailing commas, lax numbers, sloppy escapes), `MaxDepth` (64), `VerifyEof`, `AllowMissingFields`, `ReadNullPrimitivesAsDefault`, and pluggable conversion callbacks (`ObjectToPrimitive`, `PrimitiveToObject`, `StringToObject`, `ObjectToNumber`, `TrueAsString`/`FalseAsString`) for coping with irregular JSON.
+Use `NewWriter(IBufferWriter<byte>?, Options?)` and `NewReader(string/ReadOnlyMemory<byte>/IScanner<byte>, Options? options = null)` for streaming input/output. Only when using `NewWriter` might you need to call `SyncJson.Writer.Flush`, and even then, only if writing a primitive as an/the root value or to be able to see the output before the root is finished writing.
 
-**Representation.** With `NewtonsoftCompatibility` on, deduplicated objects use Newtonsoft's `"$id"`/`"$ref"` properties (and `"$values"` for deduplicated arrays), type tags use `"$type"`, and byte arrays are Base64. With it off, SyncLib uses one-character metadata keys — `"\f"` (id), `"\r"` (back-reference), `"\t"` (type tag) — and byte arrays default to BAIS (`ByteArrayInString`, an ASCII-preserving encoding; `JsonByteArrayMode` selects `Array`, `Base64`, `Bais` or `PrefixedBais`). Metadata properties must be first in an object, as in Newtonsoft. Char lists can be stored as strings (`CharListAsString`).
+**Properties of SyncJson.Options**: `NewtonsoftCompatibility` (default **true**), `NameConverter` (e.g. `SyncJson.ToCamelCase`), `RootMode`, `ByteArrayMode`.
 
-**Performance notes.** The reader makes a single forward pass; reading fields in the written order is fastest. Out-of-order reads work but buffer the skipped fields in memory. Files over 2 GB are readable if no single out-of-order scan spans 2 GB.
+- **Writer options** (`Options.Write`): `Minify`, `Newline`, `Indent`, `SpaceAfterColon`, `EscapeUnicode`, `MaxIndentDepth`, `CharListAsString`, `InitialBufferSize`.
+- **Reader options** (`Options.Read`): `AllowComments` (default true), `Strict` (default false — tolerates trailing commas, lax numbers, sloppy escapes), `MaxDepth` (64), `VerifyEof`, `AllowMissingFields`, `ReadNullPrimitivesAsDefault`, and pluggable conversion callbacks (`ObjectToPrimitive`, `PrimitiveToObject`, `StringToObject`, `ObjectToNumber`, `TrueAsString`/`FalseAsString`) for coping with irregular JSON.
 
-**SyncJsonDOM.** If (part of) a document was already parsed by System.Text.Json — say, a web framework handed you a `JsonElement`, or you inspected the JSON to decide how to deserialize it — the `SyncJsonDOM` class reads it without re-parsing: `SyncJsonDOM.Read<T>(docOrElement, sync, options?)` / `ReadI` / `NewReader` mirror the `SyncJson` methods, and `SyncJsonDOM.Reader` understands the same conventions (`NameConverter`, `$id`/`$ref` deduplication, byte-array encodings, type tags), so it can read anything `SyncJson.Writer` wrote. Since the DOM is random-access, out-of-order reads are cheap, and a `$ref` can even refer to an `$id` that appears later in the document. Note: syntax rules are System.Text.Json's (options like `Read.Strict` and `Read.AllowComments` only influence the overloads that parse text), and it is available only in the net6.0 build, because `JsonDocument` doesn't exist in .NET Standard 2.x or .NET Framework. Prefer plain `SyncJson` when your input is bytes or text — parsing a DOM first is slower.
+**Representation.** With `NewtonsoftCompatibility` on, deduplicated objects use Newtonsoft's `"$id"`/`"$ref"` properties (and `"$values"` for deduplicated arrays), type tags use `"$type"`, and byte arrays are Base64. With it off, SyncLib uses one-character metadata keys — `"\f"` (id), `"\r"` (back-reference), `"\t"` (type tag) — and byte arrays default to BAIS (`ByteArrayInString`, an ASCII-preserving encoding; `JsonByteArrayMode` selects `Array`, `Base64`, `Bais` or `PrefixedBais`). Metadata properties must be first in an object, as in Newtonsoft. A deduplicated byte or char list that is written as a string is wrapped in an object, e.g. `{"\f": 1, "": "..."}`; but with `NewtonsoftCompatibility` on, such lists are not deduplicated (as in Json.NET), so each reference is written in full and read back as a separate copy. Character lists can be stored as strings (`CharListAsString`).
+
+**Performance notes.** The reader makes a single forward pass, but it buffers any properties within an object that are skipped in case the caller reads them later, and reading in the written order is fastest. Files over 2 GB can be read, provided that no single out-of-order scan spans 2 GB.
 
 **Schema mode.** `SyncJson.WriteSchema<T>(syncFunc, options?)` / `WriteSchemaString` / `NewSchemaWriter` run your synchronizer once with **no data** (`SyncMode.Schema`) and emit a JSON Schema (draft 2020-12) describing exactly what the writer would produce with the same options — including name conversion, dedup markers and byte-array encoding. Each type becomes a `$defs` entry (named after the .NET type, or the type tag if one is set), referenced by `$ref`, so recursive types work. Synchronizing one type in two conflicting ways throws. Being data-blind, it records only the code path taken with default values — conditional fields and non-default polymorphic branches are not captured.
 
-### SyncBinary
+### Loyc.SyncLib.SyncJsonDOM
 
-`SyncBinary.Write`/`WriteI`/`Read`/`ReadI` plus `NewWriter(IBufferWriter<byte>, Options?)`/`NewReader(...)`; the reader can stream files of unlimited size.
+An implementation of `ISyncManager` for reading JSON from a pre-parsed `System.Text.Json.JsonDocument` or `JsonElement`; works analogously to SyncJson. Like `SyncJson.Reader`, `SyncJsonDOM` can understand anything `SyncJson.Writer` wrote. Usually `SyncJson` is faster, but out-of-order reads are cheap for `SyncJsonDOM`, and unlike `SyncJson` it can understand a `$ref` that refers to an `$id` that appears later in the document.
+
+Note: `SyncJsonDOM` is only available in net6.0+ builds as `JsonDocument` doesn't exist in earlier .NETs. And though it accepts `SyncJson.Options`, options like `Read.Strict` and `Read.AllowComments` have no effect since the input was already parsed.
+
+Key members (A/B syntax represents multiple overloads):
+
+	public static Reader NewReader(JsonDocument/JsonElement document, SyncJson.Options? options = null)
+
+	public static T? Read<T>(JsonDocument/JsonElement json, SyncObjectFunc<Reader, T> sync, SyncJson.Options? options = null)
+
+	public static T? ReadI<T>(JsonDocument/JsonElement json, SyncObjectFunc<ISyncManager, T> sync, SyncJson.Options? options = null)
+
+	public static T? Read<T, SyncObject>(JsonDocument/JsonElement json, SyncObject sync, SyncJson.Options? options = null)
+		where SyncObject : ISyncObject<Reader, T>
+
+	// Convenience methods to parse with JsonDocument.Parse and read with Read/ReadI;
+	// not recommended: SyncJson.Read is faster.
+
+	public static T? Read<T>(string/ReadOnlyMemory<byte> json, SyncObjectFunc<Reader, T> sync, SyncJson.Options? options = null)
+	public static T? ReadI<T>(string/ReadOnlyMemory<byte> json, SyncObjectFunc<ISyncManager, T> sync, SyncJson.Options? options = null)
+	public static T? Read<T, SyncObject>(ReadOnlyMemory<byte> json, SyncObject sync, SyncJson.Options? options = null)
+		where SyncObject : ISyncObject<Reader, T>
+
+	// Converts options to JsonDocumentOptions.
+	public static JsonDocumentOptions GetDocumentOptions(SyncJson.Options options) => new JsonDocumentOptions {...}
+
+### Loyc.SyncLib.SyncBinary
+
+Use `SyncBinary.Write`/`WriteI`/`Read`/`ReadI` (see method list above) or `NewWriter(IBufferWriter<byte>, Options?)`/`NewReader(...)`.
+
+`SyncBinary.NewReader/NewWriter` can be used for streaming output; they works the same way as `SyncJson.NewReader/NewWriter` above.
 
 The format stores **no metadata** — no field names, lengths only where needed, schema entirely in your code. That makes it very fast and compact, but unforgiving: fields must be read in the order written, with the same (or a compatible) type, or you get an exception — or garbage.
 
 **Strings** are stored in [WTF-8](https://simonsapin.github.io/wtf-8/) — UTF-8 extended so that unpaired UTF-16 surrogates encode as themselves — so *any* .NET string round-trips losslessly, even a malformed one (as of v30.3; earlier versions replaced unpaired surrogates with U+FFFD, like `Encoding.UTF8`). Well-formed strings are byte-for-byte ordinary UTF-8. The codec is the public class `Loyc.WTF8Encoding`, usable on its own.
 
-**Compatible type changes** certain changes can be made safely: enlarging integer types (`short`→`int`→`long`→`BigInteger`); `T`↔`T?` for integers, floats, `double`, `decimal`; bool↔integer; `char`↔`ushort`; `string`↔`byte[]`; signed→unsigned *only* if no negative values were ever stored (never the reverse). Floats cannot be enlarged to doubles, and bitfields cannot change size. Everything else needs explicit versioning code.
+**Compatible type changes** certain changes can be made safely: enlarging integer types (`short`→`int`→`long`→`BigInteger`); `T`↔`T?` for integers, floats, `double`, `decimal`; bool↔integer; `char`↔`ushort` (and `char[]`↔`ushort[]`); `string`↔`byte[]` (byte lists are stored as raw bytes, like strings);signed→unsigned *only* if no negative values were ever stored (never the reverse). Floats cannot be enlarged to doubles, and bitfields cannot change size. Everything else needs explicit versioning code.
 
 The [detailed documentation](https://github.com/qwertie/ecsharp/blob/master/Core/Loyc.Essentials/SyncLib/Binary/SyncBinary.cs) is in doc comments.
 
-### SyncProtobuf (Protocol Buffers)
+### Loyc.SyncLib.SyncProtobuf (Protocol Buffers)
 
 `SyncProtobuf.Write`/`WriteI`/`Read`/`ReadI`/`NewWriter`/`NewReader`, same shape as the others. The output is **genuine proto3-compatible wire format**, verified by round-tripping against protobuf-net and by compiling the generated schemas with `protoc`.
 
