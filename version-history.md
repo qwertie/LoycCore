@@ -7,6 +7,16 @@ layout: page
 Changes to Loyc Core libraries and [LES](http://loyc.net/les)
 ----------------------------------------
 
+### v30.5.0: November 18, 2026 ###
+
+**Loyc.SyncLib (in Loyc.Essentials):**
+
+- `SyncBinary` Performance: add extra code to use less memory in `ObjectMode.Deduplicate` mode to make it harder to trigger use of Large Object Heap leading to extra gen-1 collections, to make reading a big collection of ~4,000 deduplicated objects ~twice as fast by reducing GC pause time. Not sure if I want to keep this code bloat tho, as it only improves perf in certain cases.
+
+**Loyc.Syntax:**
+
+- To improve output formatting, `Les2Printer`, `Les3Printer` and `ILNodePrinter.PrintMultiple` now ignore a statement's `%appendStatement` attribute (`CodeSymbols.TriviaAppendStatement`) if the statement before it comes from a different source file than the attribute. This happens when a macro inserts a generated node before a statement, or moves a statement into a generated block; previously, such statements were glued onto the same line. Added `LNodeExt.IsAppendStatement(stmt, predecessor)` to encapsulate this rule.
+
 ### v30.4.0: November 16, 2026 ###
 
 Mostly SyncLib bug fixes and performance work. It started with a report that reading a `Dictionary<int, byte[]>` with `SyncBinary` was oddly slow; that case is now 15× faster (603 → 41 ns per entry).
